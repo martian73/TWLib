@@ -1,0 +1,66 @@
+
+
+/quote-streamer-tokens
+
+{"data":{"token":"dGFzdHksbGl2ZSwsMTU2ODY0NzMwNywxNTY4NTYwOTA3LFUwMDAxMTE4NDE3.92MqPyDfVlJoczPxvg6AcG2kJ-aQsa39mLwM274D29k","streamer-url":"tasty.dxfeed.com:7301","websocket-url":"https://tasty.dxfeed.com/live","level":"live"},"context":"/quote-streamer-tokens"}
+
+Save token for WebSocket use
+Save Streamer Url
+Save WebSocket URL
+
+
+https://<streamer-url>/live/cometd
+HeaderReq: Sec-WebSocket-Key: BnP5LOsJUWs1tXcH34gLJg==    ( What is this from?)
+
+101 Switching Protocols
+HeaderRes: Sec-WebSocket-Accept: 1ZiYUVSlwJscnjUGc0MNLRbhfMY=
+Instantiate WebSocket
+
+https://<websocket-url>/
+HeaderReq: Upgrade: WebSocket
+HeaderReq: Sec-WebSocket-Key: Ih703WSJsd8ASdh6nhAD5A==
+
+101 Switching Protocols
+HeaderRes: sec-websocket-accept: q98ykC3r2bMo1FOldmfNuj4rTKI=
+HeaderRes: upgrade: websocket
+
+// Advice request to server
+https://<streamer-url>/live/cometd
+[ 
+   { 
+      "advice":{ 
+         "timeout":60000,
+         "interval":0
+      },
+      "channel":"/meta/handshake",
+      "ext":{ 
+         "com.devexperts.auth.AuthToken":"dGFzdHksbGl2ZSwsMTU2ODY0NzMwNywxNTY4NTYwOTA3LFUwMDAxMTE4NDE3.92MqPyDfVlJoczPxvg6AcG2kJ-aQsa39mLwM274D29k"
+      },
+      "id":"1",
+      "minimumVersion":"1.0",
+      "supportedConnectionTypes":[ 
+         "websocket"
+      ],
+      "version":"1.0"
+
+// Advice response from server
+[ 
+   { 
+      "minimumVersion":"1.0",
+      "clientId":"51br1titf6to75qhos4b9dfalo0ns",
+      "supportedConnectionTypes":[ 
+         "websocket"
+      ],
+      "advice":{ 
+         "interval":0,
+         "timeout":30000,
+         "reconnect":"retry"
+      },
+      "channel":"/meta/handshake",
+      "id":"1",
+      "version":"1.0",
+      "successful":true
+   }
+]
+
+
