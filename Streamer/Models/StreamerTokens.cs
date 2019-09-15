@@ -7,7 +7,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 
-namespace TWLib.Models
+namespace TWLib.Streamer.Models
 {
     public class StreamerTokens
     {
@@ -26,7 +26,6 @@ namespace TWLib.Models
             [JsonProperty("level")]
             public string Level { get; set; }
         }
-
 
         [JsonProperty("data")]
         public Data2 Data { get; set; }

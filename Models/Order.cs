@@ -66,21 +66,7 @@ namespace TWLib.Models
         [EnumMember(Value = "Future")]
         FUTURE
     }
-    public class OrderMarket : Order
-    {
 
-    }
-
-    public class LimitOrder : Order
-    {
-
-    }
-
-    public class StopLimit : Order
-    {
-        [JsonProperty("stop-trigger")]
-        public string StopTrigger { get; set; }
-    }
 
     public class Order
     {
@@ -111,13 +97,13 @@ namespace TWLib.Models
         [JsonProperty("price-effect")]
         public PriceEffect PriceEffect { get; set; }
 
-
+        [JsonProperty("stop-trigger")]
+        public string StopTrigger { get; set; }
 
         [JsonProperty("legs")]
         public IList<Leg> Legs { get; set; }
 
         [JsonProperty("source")]
         public string Source { get; set; }
-
     }
 }
