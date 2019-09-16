@@ -13,7 +13,7 @@ using Newtonsoft.Json;
 
 namespace TWLib.Streamer
 {
-    public abstract class TWWebSocketManager
+    public abstract class TWWebSocketManager : IDisposable
     {
         public TWWebSocketManager()
         {
@@ -55,6 +55,13 @@ namespace TWLib.Streamer
             StreamerSocket = new ClientWebSocket();
             StreamerSocket.ConnectAsync(new System.Uri(StreamerWebsocketUrl),
                 CancellationToken.None).ContinueWith(AfterConnect);
+        }
+
+        public WebSocketState GetStreamerSocketState()
+        {
+            if (StreamerSocket != null)
+                return StreamerSocket.State;
+            return WebSocketState.None;
         }
 
         public Func<Task> ServerConnected;
@@ -163,6 +170,12 @@ namespace TWLib.Streamer
                 TokenSource.Cancel();
                 StreamerSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "closing", new CancellationToken(false));
             }
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
         }
 
         public virtual void SendRequest(TWRequest request)

@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
 
 
@@ -11,6 +12,20 @@ namespace TWLib.Streamer.Models
 {
     public class DxfeedMetaHandshakeReq : DxfeedRequest
     {
+        public DxfeedMetaHandshakeReq()
+        {
+
+        }
+
+        public DxfeedMetaHandshakeReq(int interval, int timeout, string authToken)
+        {
+            Advice = new Advice2();
+            Ext = new Ext2();
+            Advice.Timeout = timeout;
+            Advice.Timeout = interval;
+            Ext.ComDevexpertsAuthToken = authToken;
+        }
+
         public class Advice2
         {
 
@@ -32,7 +47,8 @@ namespace TWLib.Streamer.Models
         public Advice2 Advice { get; set; }
 
         [JsonProperty("channel")]
-        public override string Channel { get { return "/meta/handshake"; } }
+        [JsonConverter(typeof(StringEnumConverter))]
+        public override DxfeedChannel Channel { get { return DxfeedChannel.METAHANDSHAKE; } }
 
         [JsonProperty("ext")]
         public Ext2 Ext { get; set; }

@@ -62,11 +62,14 @@
     <Compile Include="Models\SymbolSearch.cs" />
     <Compile Include="Models\Session.cs" />
     <Compile Include="Streamer\DxfeedStreamer.cs" />
+    <Compile Include="Streamer\Models\DxfeedMetaConnectReq.cs" />
+    <Compile Include="Streamer\Models\DxfeedMetaConnectRes.cs" />
     <Compile Include="Streamer\Models\DxfeedRequest.cs" />
     <Compile Include="Streamer\Models\DxfeedMetaHandshakeRes.cs" />
     <Compile Include="Streamer\Models\DxfeedMetaHandshakeReq.cs" />
     <Compile Include="Streamer\Models\DxfeedResponse.cs" />
     <Compile Include="Streamer\Models\DxfeedServiceDataRes.cs" />
+    <Compile Include="Streamer\Models\DxfeedServiceSubReq.cs" />
     <Compile Include="Streamer\Models\Enumerations.cs" />
     <Compile Include="Streamer\Models\StreamerRequest.cs" />
     <Compile Include="Models\TradingStatus.cs" />

@@ -37,14 +37,47 @@ namespace TWLib.Streamer
         }
     }
     
-    public class DxfeedStreamer : TWWebSocketManager
+    public class DxfeedStreamer : TWWebSocketManager, IDisposable
     {
+        /// <summary>
+        /// Conversation, request and response, grouped by id number
+        /// </summary>
         public Dictionary <int, DxConvo> DxfeedConversations;
 
+        /// <summary>
+        /// Client Identification string
+        /// </summary>
+        private string ClientID;
+
+        /// <summary>
+        /// Authorization Token
+        /// </summary>
         private string AuthToken;
+
         private DateTime LastValidate;
+
         private StreamerTokens StreamTokens;
-       
+
+        private DxFeedStreamState _State = DxFeedStreamState.NONE;
+
+        public DxFeedStreamState State
+        {
+            get
+            {
+                return _State;
+            }
+        }
+
+        /// <summary>
+        /// Interval time
+        /// </summary>
+        private int Interval = 0;
+
+        /// <summary>
+        /// Timeout in milliseconds
+        /// </summary>
+        private int Timeout = 300000;
+
         public DxfeedStreamer()
         {
             StreamActive = false;
@@ -57,6 +90,7 @@ namespace TWLib.Streamer
             {
                 Thread.Sleep(500);
             }
+            Console.WriteLine("Exiting HeartBeatLoop.");
         }
 
         public void Init(string authToken)
@@ -65,6 +99,8 @@ namespace TWLib.Streamer
                 return;
 
             AuthToken = authToken;
+
+            _State = DxFeedStreamState.HANDSHAKE;
 
             StreamTokens = GetQuoteStreamerTokens();
             StreamerWebsocketUrl = (StreamTokens.Data.WebsocketUrl + "/cometd").Replace("https://", "wss://");
@@ -76,29 +112,40 @@ namespace TWLib.Streamer
 
             Start();
 
-            DxfeedMetaHandshakeReq req = new DxfeedMetaHandshakeReq();
-            req.Advice = new DxfeedMetaHandshakeReq.Advice2();
-            req.Ext = new DxfeedMetaHandshakeReq.Ext2();
-
-            req.Advice.Interval = 0;
-            req.Advice.Timeout = 60000;
-            req.Ext.ComDevexpertsAuthToken = StreamTokens.Data.Token;
-
-            while (!StreamActive)
+            while (!StreamActive || GetStreamerSocketState() != WebSocketState.Open)
                 Thread.Sleep(100);
             
+            DxfeedMetaHandshakeReq req = new DxfeedMetaHandshakeReq(0, 60000, StreamTokens.Data.Token);
             SendRequest(req);
         }
 
         public void Restart()
         {
             StreamActive = false;
+            _State = DxFeedStreamState.NONE;
 
             // Wait for heartbeat thread to exit
             HeartBeatThread.Join();
             HeartBeatThread = null;
 
             Init(AuthToken);
+        }
+
+        public void Stop()
+        {
+            StreamActive = false;
+            _State = DxFeedStreamState.NONE;
+
+            HeartBeatThread.Join();
+            HeartBeatThread = null;
+
+            Console.WriteLine("Exiting Dxfeed.");
+        }
+
+        public void AddSymbolsSubscription(List<string> symbols)
+        {
+            DxfeedServiceSubReq req = new DxfeedServiceSubReq(ClientID, symbols);
+            SendRequest(req);
         }
 
         public override void SendRequest(TWRequest request)
@@ -119,6 +166,42 @@ namespace TWLib.Streamer
             base.SendRequest(request);
         }
 
+        public void HandleConversation(int id)
+        {
+            DxConvo convo = DxfeedConversations[id];
+            switch (convo.Response.Channel)
+            {
+                case DxfeedChannel.METAHANDSHAKE:
+                    Console.WriteLine("Convo Channel: /meta/handshake: Setting clientID");
+                    ClientID = ((DxfeedMetaHandshakeRes)convo.Response).ClientId;
+                    DxfeedMetaConnectReq req = new DxfeedMetaConnectReq(ClientID, 0);
+                    SendRequest(req);
+                    _State = DxFeedStreamState.CONNECT;
+                    break;
+                case DxfeedChannel.METACONNECT:
+                    Console.WriteLine("Convo Channel: /meta/connect: Setting Interval and Timeout");
+                    DxfeedMetaConnectRes mcr = (DxfeedMetaConnectRes)convo.Response;
+                    if (!mcr.Successful)
+                        throw new Exception("Failed connect.");
+                    Interval = mcr.Advice.Interval;
+                    Timeout = mcr.Advice.Timeout;
+                    _State = DxFeedStreamState.READY;
+                    break;
+                case DxfeedChannel.SERVICEDATA:
+                    Console.WriteLine("Convo Channel: /service/data");
+                    break;
+                case DxfeedChannel.SERVICESTATE:
+                    Console.WriteLine("Convo Channel: /service/state");
+                    break;
+                case DxfeedChannel.SERVICESUB:
+                    Console.WriteLine("Convo Channel: /service/sub");
+                    break;
+                default:
+                    throw new Exception("Unhandled channel");
+            }
+            DxfeedConversations.Remove(id);
+        }
+
         public override void ReceiveResponse(string response)
         {
             // start with serializing the base object, DxfeedResponse, and switch on channel
@@ -128,20 +211,23 @@ namespace TWLib.Streamer
                 throw new Exception("Not expecting multiple elements in the array");
 
             DxfeedResponse res = resArr[0];
-
             DxfeedResponse finalRes = res;
 
             switch (res.Channel)
             {
                 case DxfeedChannel.METAHANDSHAKE:
                     Console.WriteLine("/meta/handshake");
-                    resArr = JsonConvert.DeserializeObject<DxFeedMetaHandshakeRes[]>(response);
+                    resArr = JsonConvert.DeserializeObject<DxfeedMetaHandshakeRes[]>(response);
                     if (resArr.Length != 1)
                         throw new Exception("Not expecting multiple elements in the array");
-                    res = resArr[0];
+                    finalRes = resArr[0];
                     break;
                 case DxfeedChannel.METACONNECT:
                     Console.WriteLine("/meta/connect");
+                    resArr = JsonConvert.DeserializeObject<DxfeedMetaConnectRes[]>(response);
+                    if (resArr.Length != 1)
+                        throw new Exception("Not expecting multiple elements in the array");
+                    finalRes = resArr[0];
                     break;
                 case DxfeedChannel.SERVICEDATA:
                     Console.WriteLine("/service/data");
@@ -167,10 +253,11 @@ namespace TWLib.Streamer
                     {
                         DxfeedConversations[id].Received = DateTime.UtcNow;
                         DxfeedConversations[id].Response = finalRes;
+                        HandleConversation(id);
                     }
                 }
             }
-            Console.WriteLine("Received: \r\n" + JsonConvert.SerializeObject(res));
+            Console.WriteLine("Received: \r\n" + response);
         }
 
         private StreamerTokens GetQuoteStreamerTokens()

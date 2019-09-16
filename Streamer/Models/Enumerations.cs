@@ -16,6 +16,14 @@ namespace TWLib.Streamer.Models
         METAQUEUE
     }
 
+    public enum DxFeedStreamState
+    {
+        NONE,
+        HANDSHAKE,
+        CONNECT,
+        READY
+    }
+
     public enum StreamerAction
     {
         [EnumMember(Value = "heartbeat")]
@@ -39,6 +47,8 @@ namespace TWLib.Streamer.Models
         [EnumMember(Value = "/service/state")]
         SERVICESTATE,
         [EnumMember(Value = "/service/data")]
-        SERVICEDATA
+        SERVICEDATA,
+        [EnumMember(Value = "/service/timeSeriesData")]
+        SERVICETIMESERIESDATA
     }
 }

@@ -1,9 +1,10 @@
-﻿using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 
 namespace TWLib.Streamer.Models
 {
@@ -19,7 +20,8 @@ namespace TWLib.Streamer.Models
         public string Id { get; set; }
 
         [JsonProperty("channel")]
-        public virtual string Channel { get; set; }
+        [JsonConverter(typeof(StringEnumConverter))]
+        public virtual DxfeedChannel Channel { get; set; }
 
         public override string Serialize()
         {

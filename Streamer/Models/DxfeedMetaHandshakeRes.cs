@@ -9,7 +9,7 @@ using Newtonsoft.Json.Linq;
 
 namespace TWLib.Streamer.Models
 {
-    public class DxFeedMetaHandshakeRes : DxfeedResponse
+    public class DxfeedMetaHandshakeRes : DxfeedResponse
     {
         public class Advice2
         {
@@ -45,13 +45,13 @@ namespace TWLib.Streamer.Models
 
         public override string Serialize()
         {
-            DxFeedMetaHandshakeRes[] arr = new DxFeedMetaHandshakeRes[] { this };
+            DxfeedMetaHandshakeRes[] arr = new DxfeedMetaHandshakeRes[] { this };
             return JsonConvert.SerializeObject(arr);
         }
 
         public override TWResponse Deserialize(string json)
         {
-            return JsonConvert.DeserializeObject<DxFeedMetaHandshakeRes>(json);
+            return JsonConvert.DeserializeObject<DxfeedMetaHandshakeRes>(json);
         }
     }
 }

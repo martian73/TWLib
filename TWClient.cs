@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Text;
@@ -8,6 +9,7 @@ using System.Threading;
 using System.Web;
 using TWLib.Models;
 using TWLib.Streamer;
+using TWLib.Streamer.Models;
 
 namespace TWLib
 {
@@ -71,6 +73,8 @@ namespace TWLib
             if (KeepAliveThread != null && KeepAliveThread.ThreadState == ThreadState.Running)
                 KeepAliveThread.Join();
             KeepAliveThread = null;
+
+            Console.WriteLine("Logged out.");
         }
 
         private string GetSessionToken()
@@ -182,6 +186,14 @@ namespace TWLib
 
             DxfeedClient = new DxfeedStreamer();
             DxfeedClient.Init(AuthToken);
+        }
+
+        public void CloseDxfeedStreamer()
+        {
+            Console.WriteLine("Closing DXFeed.");
+            DxfeedClient.Stop();
+            DxfeedClient.Dispose();
+            DxfeedClient = null;
         }
 
         #endregion
@@ -544,6 +556,11 @@ namespace TWLib
             return chains;
         }
         #endregion
+
+        public void AddSymbolsSubscription(List<string> symbols)
+        {
+            DxfeedClient.AddSymbolsSubscription(symbols);
+        }
 
         public Orders ExecuteOrder(string accountID, Order order)
         {
