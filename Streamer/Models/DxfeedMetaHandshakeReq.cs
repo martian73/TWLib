@@ -38,17 +38,18 @@ namespace TWLib.Streamer.Models
         public Ext2 Ext { get; set; }
 
         [JsonProperty("minimumVersion")]
-        public string MinimumVersion { get; set; }
+        public string MinimumVersion { get { return TWClient.MinimumVersion; } }
 
         [JsonProperty("supportedConnectionTypes")]
-        public IList<string> SupportedConnectionTypes { get; set; }
+        public IList<string> SupportedConnectionTypes { get { return new List<string>(new String[] { "websocket" }); } }
 
         [JsonProperty("version")]
-        public string Version { get; set; }
+        public string Version { get { return TWClient.ClientVersion; } }
 
         public override string Serialize()
         {
-            return JsonConvert.SerializeObject(this);
+            DxfeedMetaHandshakeReq[] arr = new DxfeedMetaHandshakeReq[] { this };
+            return JsonConvert.SerializeObject(arr);
         }
 
         public override TWRequest Deserialize(string json)

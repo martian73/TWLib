@@ -2,36 +2,43 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Serialization;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace TWLib.Streamer.Models
 {
+
+    public enum StreamType
+    {
+        DXFEED,
+        STREAMER,
+        METAQUEUE
+    }
+
     public enum StreamerAction
     {
-        [JsonProperty("heartbeat")]
+        [EnumMember(Value = "heartbeat")]
         HEARTBEAT,
-        [JsonProperty("account-subscribe")]
+        [EnumMember(Value = "account-subscribe")]
         ACCOUNTSUBSCRIBE,
-        [JsonProperty("user-message-subscribe")]
+        [EnumMember(Value = "user-message-subscribe")]
         USERMESSAGESUBSRCIBE,
-        [JsonProperty("public-watchlists-subscribe")]
+        [EnumMember(Value = "public-watchlists-subscribe")]
         PUBLICWATCHLISTSSUBSCRIBE
     }
 
     public enum DxfeedChannel
     {
-        [JsonProperty("/meta/handshake")]
+        [EnumMember(Value = "/meta/handshake")]
         METAHANDSHAKE,
-        [JsonProperty("/meta/connect")]
+        [EnumMember(Value = "/meta/connect")]
         METACONNECT,
-        [JsonProperty("/service/sub")]
+        [EnumMember(Value = "/service/sub")]
         SERVICESUB,
-        [JsonProperty("/service/state")]
+        [EnumMember(Value = "/service/state")]
         SERVICESTATE,
-        [JsonProperty("/service/data")]
+        [EnumMember(Value = "/service/data")]
         SERVICEDATA
-
-
     }
 }

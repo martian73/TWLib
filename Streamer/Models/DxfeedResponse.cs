@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,14 +8,24 @@ using System.Threading.Tasks;
 
 namespace TWLib.Streamer.Models
 {
-    // channel and ID are in every DXChannel Response
+    // channel is in every DXChannel Response
     public class DxfeedResponse : TWResponse
     {
+        [JsonIgnoreAttribute]
+        public override StreamType StreamType
+        {
+            get
+            {
+                return StreamType.DXFEED;
+            }
+        }
+
         [JsonProperty("id")]
         public string Id { get; set; }
 
         [JsonProperty("channel")]
-        public string Channel { get; set; }
+        [JsonConverter(typeof(StringEnumConverter))]
+        public DxfeedChannel Channel { get; set; }
 
         public override string Serialize()
         {

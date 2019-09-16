@@ -13,8 +13,34 @@ using System.Threading;
 
 namespace TWLib.Streamer
 {
+    public class DxConvo
+    {
+        public DateTime Sent;
+        public DateTime Received;
+        public DxfeedRequest Request;
+        public DxfeedResponse Response;
+
+        public DxConvo()
+        {
+            Sent = DateTime.MinValue;
+            Received = DateTime.MinValue;
+            Request = null;
+            Response = null;
+        }
+
+        public bool Completed
+        {
+            get
+            {
+                return (Request != null && Response != null);
+            }
+        }
+    }
+    
     public class DxfeedStreamer : TWWebSocketManager
     {
+        public Dictionary <int, DxConvo> DxfeedConversations;
+
         private string AuthToken;
         private DateTime LastValidate;
         private StreamerTokens StreamTokens;
@@ -22,6 +48,7 @@ namespace TWLib.Streamer
         public DxfeedStreamer()
         {
             StreamActive = false;
+            DxfeedConversations = new Dictionary<int, DxConvo>();
         }
 
         protected override void HeartBeatLoop()
@@ -40,39 +67,110 @@ namespace TWLib.Streamer
             AuthToken = authToken;
 
             StreamTokens = GetQuoteStreamerTokens();
-            StreamerWebsocketUrl = StreamTokens.Data.StreamerUrl;
-            StreamerApiUrl = StreamTokens.Data.WebsocketUrl;
+            StreamerWebsocketUrl = (StreamTokens.Data.WebsocketUrl + "/cometd").Replace("https://", "wss://");
+            StreamerApiUrl = StreamTokens.Data.StreamerUrl;
 
-            // Init Dxfeed
-            // Start Dxfeed heartbeat thread
 
-            // Init Streamer
-            // Start streamer heartbeat thread
+            HeartBeatThread = new Thread(() => { HeartBeatLoop(); });
+            HeartBeatThread.Start();
 
-            // Init MetaQueue
-            // Start MetaQueue heartbeat thread
+            Start();
 
-        }
+            DxfeedMetaHandshakeReq req = new DxfeedMetaHandshakeReq();
+            req.Advice = new DxfeedMetaHandshakeReq.Advice2();
+            req.Ext = new DxfeedMetaHandshakeReq.Ext2();
 
-        public void InitDxfeed()
-        {
-            if (!StreamActive)
-                throw new Exception("Not logged in");
+            req.Advice.Interval = 0;
+            req.Advice.Timeout = 60000;
+            req.Ext.ComDevexpertsAuthToken = StreamTokens.Data.Token;
 
-            if (StreamActive)
-                throw new Exception("DxFeed already active.");
-
-           
+            while (!StreamActive)
+                Thread.Sleep(100);
+            
+            SendRequest(req);
         }
 
         public void Restart()
         {
             StreamActive = false;
 
-            // Join queue threads before starting
+            // Wait for heartbeat thread to exit
+            HeartBeatThread.Join();
+            HeartBeatThread = null;
 
-            StreamTokens = GetQuoteStreamerTokens();
-            StreamerApiUrl = StreamTokens.Data.StreamerUrl;
+            Init(AuthToken);
+        }
+
+        public override void SendRequest(TWRequest request)
+        {
+            if (request.StreamType != StreamType.DXFEED)
+                throw new Exception("Invalid request type");
+
+            // Add it to the list of conversations
+            DxfeedRequest dxReq = (DxfeedRequest)request;
+            int id = GetNextRequestID();
+            dxReq.Id = id.ToString();
+            DxConvo convo = new DxConvo();
+            convo.Sent = DateTime.UtcNow;
+            convo.Request = (DxfeedRequest)request;
+            DxfeedConversations.Add(id, convo);
+
+            // Call base to send it through the web socket
+            base.SendRequest(request);
+        }
+
+        public override void ReceiveResponse(string response)
+        {
+            // start with serializing the base object, DxfeedResponse, and switch on channel
+            DxfeedResponse[] resArr = JsonConvert.DeserializeObject<DxfeedResponse[]>(response);
+
+            if (resArr.Length != 1)
+                throw new Exception("Not expecting multiple elements in the array");
+
+            DxfeedResponse res = resArr[0];
+
+            DxfeedResponse finalRes = res;
+
+            switch (res.Channel)
+            {
+                case DxfeedChannel.METAHANDSHAKE:
+                    Console.WriteLine("/meta/handshake");
+                    resArr = JsonConvert.DeserializeObject<DxFeedMetaHandshakeRes[]>(response);
+                    if (resArr.Length != 1)
+                        throw new Exception("Not expecting multiple elements in the array");
+                    res = resArr[0];
+                    break;
+                case DxfeedChannel.METACONNECT:
+                    Console.WriteLine("/meta/connect");
+                    break;
+                case DxfeedChannel.SERVICEDATA:
+                    Console.WriteLine("/service/data");
+                    break;
+                case DxfeedChannel.SERVICESTATE:
+                    Console.WriteLine("/service/state");
+                    break;
+                case DxfeedChannel.SERVICESUB:
+                    Console.WriteLine("/service/sub");
+                    break;
+                default:
+                    break;
+            }
+
+            // match conversation (request/response) parts by ID if we can
+            if (finalRes.Id != null)
+            {
+                int id;
+
+                if (Int32.TryParse(finalRes.Id, out id))
+                {
+                    if (DxfeedConversations.ContainsKey(id))
+                    {
+                        DxfeedConversations[id].Received = DateTime.UtcNow;
+                        DxfeedConversations[id].Response = finalRes;
+                    }
+                }
+            }
+            Console.WriteLine("Received: \r\n" + JsonConvert.SerializeObject(res));
         }
 
         private StreamerTokens GetQuoteStreamerTokens()

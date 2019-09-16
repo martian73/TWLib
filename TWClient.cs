@@ -13,18 +13,21 @@ namespace TWLib
 {
     public class TWClient
     {
-        string Username;
-        string Password;
-        public static string APIurl = "https://api.tastyworks.com";
-        string AuthToken;
-        DxfeedStreamer DxfeedClient;
-        DateTime LoggedInAt;
-        DateTime LastValidate;
+        public const string MinimumVersion = "1.0";
+        public const string ClientVersion = "1.0";
 
-        CookieContainer Cookies;
-        bool LoggedIn;
-        string UserAgent = "okhttp/3.11.0";
-        Thread KeepAliveThread = null;
+        private string Username;
+        private string Password;
+        public static string APIurl = "https://api.tastyworks.com";
+        private string AuthToken;
+        public DxfeedStreamer DxfeedClient;
+        private DateTime LoggedInAt;
+        private DateTime LastValidate;
+
+        private CookieContainer Cookies;
+        private bool LoggedIn;
+        private string UserAgent = "okhttp/3.11.0";
+        private Thread KeepAliveThread = null;
         
         public TWClient()
         {

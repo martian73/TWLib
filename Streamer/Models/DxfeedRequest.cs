@@ -7,8 +7,14 @@ using System.Threading.Tasks;
 
 namespace TWLib.Streamer.Models
 {
+    /// <summary>
+    /// Base type that applies to all DxfeedRequests having a minimnum of an id and channel
+    /// </summary>
     public class DxfeedRequest : TWRequest
     {
+        [JsonIgnoreAttribute]
+        public override StreamType StreamType { get { return StreamType.DXFEED; } }
+
         [JsonProperty("id")]
         public string Id { get; set; }
 

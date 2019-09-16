@@ -45,7 +45,8 @@ namespace TWLib.Streamer.Models
 
         public override string Serialize()
         {
-            return JsonConvert.SerializeObject(this);
+            DxFeedMetaHandshakeRes[] arr = new DxFeedMetaHandshakeRes[] { this };
+            return JsonConvert.SerializeObject(arr);
         }
 
         public override TWResponse Deserialize(string json)
