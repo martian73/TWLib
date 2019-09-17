@@ -90,10 +90,10 @@ namespace TWLib.Streamer
             {
                 Thread.Sleep(500);
             }
-            Console.WriteLine("Exiting HeartBeatLoop.");
+            Console.WriteLine("Exiting DxFeedStreamer HeartBeatLoop.");
         }
 
-        public void Init(string authToken)
+        public override void Init(string authToken)
         {
             if (StreamActive)
                 return;
@@ -112,14 +112,14 @@ namespace TWLib.Streamer
 
             Start();
 
-            while (!StreamActive || GetStreamerSocketState() != WebSocketState.Open)
+            while (!StreamActive)
                 Thread.Sleep(100);
             
             DxfeedMetaHandshakeReq req = new DxfeedMetaHandshakeReq(0, 60000, StreamTokens.Data.Token);
             SendRequest(req);
         }
 
-        public void Restart()
+        public override void Restart()
         {
             StreamActive = false;
             _State = DxFeedStreamState.NONE;
@@ -131,7 +131,7 @@ namespace TWLib.Streamer
             Init(AuthToken);
         }
 
-        public void Stop()
+        public override void Stop()
         {
             StreamActive = false;
             _State = DxFeedStreamState.NONE;
@@ -144,7 +144,7 @@ namespace TWLib.Streamer
 
         public void AddSymbolsSubscription(List<string> symbols)
         {
-            DxfeedServiceSubReq req = new DxfeedServiceSubReq(ClientID, symbols);
+            DxfeedServiceSubAddReq req = new DxfeedServiceSubAddReq(ClientID, symbols);
             SendRequest(req);
         }
 

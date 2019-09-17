@@ -9,15 +9,15 @@ using Newtonsoft.Json.Linq;
 
 namespace TWLib.Streamer.Models
 {
-    public class DxfeedServiceSubReq : DxfeedRequest
+    public class DxfeedServiceSubAddReq : DxfeedRequest
     {
 
-        public DxfeedServiceSubReq()
+        public DxfeedServiceSubAddReq()
         {
 
         }
 
-        public DxfeedServiceSubReq(string clientId, List<string>symbols)
+        public DxfeedServiceSubAddReq(string clientId, List<string>symbols)
         {
             ClientId = clientId;
             Data = new Data2();
@@ -61,13 +61,13 @@ namespace TWLib.Streamer.Models
 
         public override string Serialize()
         {
-            DxfeedServiceSubReq[] arr = new DxfeedServiceSubReq[] { this };
+            DxfeedServiceSubAddReq[] arr = new DxfeedServiceSubAddReq[] { this };
             return JsonConvert.SerializeObject(arr);
         }
 
         public override TWRequest Deserialize(string json)
         {
-            return JsonConvert.DeserializeObject<DxfeedServiceSubReq>(json);
+            return JsonConvert.DeserializeObject<DxfeedServiceSubAddReq>(json);
         }
     }
 }

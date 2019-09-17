@@ -49,6 +49,9 @@ namespace TWLib.Streamer
         protected Thread HeartBeatThread { get; set; }
 
         protected abstract void HeartBeatLoop();
+        public abstract void Init(string authToken);
+        public abstract void Restart();
+        public abstract void Stop();
 
         protected void Start()
         {
@@ -187,7 +190,28 @@ namespace TWLib.Streamer
             byte [] postBytes = Encoding.UTF8.GetBytes(json);
             StreamerSocket.SendAsync(new System.ArraySegment<byte>(postBytes), WebSocketMessageType.Text, true, CancellationToken.None);
 
-            Console.WriteLine("Sending: " + json);
+            Console.WriteLine("Sending " + request.StreamType.ToString() + ": " + json);
+        }
+
+        public virtual void SendRawRequest(string request)
+        {
+            if (!StreamActive)
+                throw new Exception("Stream not active.");
+            
+            byte[] postBytes = Encoding.UTF8.GetBytes(request);
+            StreamerSocket.SendAsync(new System.ArraySegment<byte>(postBytes), WebSocketMessageType.Text, true, CancellationToken.None);
+
+            Console.WriteLine("Sending Raw: " + request);
+        }
+
+        public virtual void SendRawRequest(byte[] postBytes)
+        {
+            if (!StreamActive)
+                throw new Exception("Stream not active.");
+            
+            StreamerSocket.SendAsync(new System.ArraySegment<byte>(postBytes), WebSocketMessageType.Text, true, CancellationToken.None);
+
+            Console.WriteLine("Sending Raw: " + Encoding.UTF8.GetString(postBytes));
         }
 
         public abstract void ReceiveResponse(string response);

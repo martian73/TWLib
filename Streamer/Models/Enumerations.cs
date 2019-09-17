@@ -12,7 +12,7 @@ namespace TWLib.Streamer.Models
     public enum StreamType
     {
         DXFEED,
-        STREAMER,
+        STWSTREAMER,
         METAQUEUE
     }
 
@@ -22,18 +22,6 @@ namespace TWLib.Streamer.Models
         HANDSHAKE,
         CONNECT,
         READY
-    }
-
-    public enum StreamerAction
-    {
-        [EnumMember(Value = "heartbeat")]
-        HEARTBEAT,
-        [EnumMember(Value = "account-subscribe")]
-        ACCOUNTSUBSCRIBE,
-        [EnumMember(Value = "user-message-subscribe")]
-        USERMESSAGESUBSRCIBE,
-        [EnumMember(Value = "public-watchlists-subscribe")]
-        PUBLICWATCHLISTSSUBSCRIBE
     }
 
     public enum DxfeedChannel
@@ -51,4 +39,17 @@ namespace TWLib.Streamer.Models
         [EnumMember(Value = "/service/timeSeriesData")]
         SERVICETIMESERIESDATA
     }
+
+    public enum StwAction
+    {
+        [EnumMember(Value = "heartbeat")]
+        HEARTBEAT,
+        [EnumMember(Value = "account-subscribe")]
+        ACCOUNTSUBSCRIBE,
+        [EnumMember(Value = "user-message-subscribe")]
+        USERMESSAGESUBSRCIBE,
+        [EnumMember(Value = "public-watchlists-subscribe")]
+        PUBLICWATCHLISTSSUBSCRIBE
+    }
+
 }
