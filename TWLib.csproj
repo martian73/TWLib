@@ -62,6 +62,7 @@
     <Compile Include="Models\SymbolSearch.cs" />
     <Compile Include="Models\Session.cs" />
     <Compile Include="Streamer\DxfeedStreamer.cs" />
+    <Compile Include="Streamer\MetaqueStreamer.cs" />
     <Compile Include="Streamer\Models\DxfeedMetaConnectReq.cs" />
     <Compile Include="Streamer\Models\DxfeedMetaConnectRes.cs" />
     <Compile Include="Streamer\Models\DxfeedRequest.cs" />
@@ -69,11 +70,15 @@
     <Compile Include="Streamer\Models\DxfeedMetaHandshakeReq.cs" />
     <Compile Include="Streamer\Models\DxfeedResponse.cs" />
     <Compile Include="Streamer\Models\DxfeedServiceDataRes.cs" />
-    <Compile Include="Streamer\Models\DxfeedServiceSubReq.cs" />
+    <Compile Include="Streamer\Models\DxfeedServiceSubAddReq.cs" />
     <Compile Include="Streamer\Models\Enumerations.cs" />
     <Compile Include="Streamer\Models\StreamerRequest.cs" />
     <Compile Include="Models\TradingStatus.cs" />
     <Compile Include="Models\ValidateResponse.cs" />
+    <Compile Include="Streamer\Models\StwAccountSubscribeReq.cs" />
+    <Compile Include="Streamer\Models\StwRequest.cs" />
+    <Compile Include="Streamer\Models\StwResponse.cs" />
+    <Compile Include="Streamer\STWStreamer.cs" />
     <Compile Include="Streamer\Models\StreamerTokens.cs" />
     <Compile Include="Streamer\Models\TWRequest.cs" />
     <Compile Include="Streamer\Models\TWResponse.cs" />

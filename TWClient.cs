@@ -3,6 +3,7 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading;
@@ -22,7 +23,20 @@ namespace TWLib
         private string Password;
         public static string APIurl = "https://api.tastyworks.com";
         private string AuthToken;
+
+        private Accounts _Accounts;
+
+        public Accounts Accounts {
+            get
+            {
+                return _Accounts;
+            }
+        }
+
         public DxfeedStreamer DxfeedClient;
+        public STWStreamer TWStreamerClient;
+        public MetaqueStreamer MetaqueueClient;
+
         private DateTime LoggedInAt;
         private DateTime LastValidate;
 
@@ -194,6 +208,49 @@ namespace TWLib
             DxfeedClient.Stop();
             DxfeedClient.Dispose();
             DxfeedClient = null;
+        }
+
+        public void InitStwStreamer()
+        {         
+            if (!LoggedIn || AuthToken == null)
+                throw new Exception("Not logged in.");
+
+            TWStreamerClient = new STWStreamer();
+            TWStreamerClient.Init(AuthToken);
+
+            _Accounts = GetAccounts();
+            List<string> accountsId = new List<string>();
+
+            foreach (Accounts.Item item in _Accounts.Data.Items)
+            {
+                accountsId.Add(item.Account.AccountNumber);
+            }
+
+            TWStreamerClient.AccountSubscribe(accountsId);
+            TWStreamerClient.UserMessageSubscribe();
+            TWStreamerClient.PublicWatchListSubscribe();
+        }
+
+        public void CloseStwStreamer()
+        {
+            Console.WriteLine("Closing StwStreamer");
+            TWStreamerClient.Stop();
+            TWStreamerClient.Dispose();
+            TWStreamerClient = null;
+        }
+
+        public void InitMetaqueueStreamer()
+        {
+            MetaqueueClient = new MetaqueStreamer();
+            MetaqueueClient.Init(null);
+        }
+
+        public void CloseMetaqueStreamer()
+        {
+            Console.WriteLine("Closing MetaqueueStreamer");
+            MetaqueueClient.Stop();
+            MetaqueueClient.Dispose();
+            MetaqueueClient = null;
         }
 
         #endregion
@@ -560,6 +617,9 @@ namespace TWLib
         public void AddSymbolsSubscription(List<string> symbols)
         {
             DxfeedClient.AddSymbolsSubscription(symbols);
+
+            foreach (string symbol in symbols)
+                MetaqueueClient.SubscribeMarketMetrics(symbol);
         }
 
         public Orders ExecuteOrder(string accountID, Order order)
