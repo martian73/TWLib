@@ -19,6 +19,7 @@ namespace TWLib.Streamer.Models
     public enum DxFeedStreamState
     {
         NONE,
+        OPEN,
         HANDSHAKE,
         CONNECT,
         READY
