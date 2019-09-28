@@ -1,15 +1,29 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Net;
-using System.IO;
-using TWLib.Streamer.Models;
+/*   This file is part of TWLib.
+ *
+ *    TWLib is free software: you can redistribute it and/or modify
+ *    it under the terms of the GNU General Public License as published by
+ *    the Free Software Foundation, either version 3 of the License, or
+ *    (at your option) any later version.
+ *
+ *    TWLib is distributed in the hope that it will be useful,
+ *    but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
+ *    GNU General Public License for more details.
+ *
+ *    You should have received a copy of the GNU General Public License
+ *    along with TWLib.  If not, see <https://www.gnu.org/licenses/>.
+ ******************************************************************************
+ *
+ *    Project available from here: https://github.com/martian73/TWLib.git
+ ******************************************************************************
+ */
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using System.Net.WebSockets;
+using System;
+using System.Collections.Generic;
+using System.Net;
 using System.Threading;
+using TWLib.Streamer.Models;
 
 namespace TWLib.Streamer
 {
@@ -36,13 +50,13 @@ namespace TWLib.Streamer
             }
         }
     }
-    
+
     public class DxfeedStreamer : TWWebSocketManager, IDisposable
     {
         /// <summary>
         /// Conversation, request and response, grouped by id number
         /// </summary>
-        public Dictionary <int, DxConvo> DxfeedConversations;
+        public Dictionary<int, DxConvo> DxfeedConversations;
 
         /// <summary>
         /// Client Identification string
@@ -114,7 +128,7 @@ namespace TWLib.Streamer
 
             while (!StreamActive)
                 Thread.Sleep(100);
-            
+
             DxfeedMetaHandshakeReq req = new DxfeedMetaHandshakeReq(0, 60000, StreamTokens.Data.Token);
             SendRequest(req);
         }
@@ -294,3 +308,4 @@ namespace TWLib.Streamer
         }
     }
 }
+

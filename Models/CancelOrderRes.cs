@@ -25,41 +25,8 @@ using System.Collections.Generic;
 
 namespace TWLib.Models
 {
-    public class OrdersLive
+    public class CancelOrderRes
     {
-        public class Fill
-        {
-            [JsonProperty("ext-group-fill-id")]
-            public string ExtGroupFillId
-            {
-                get;
-                set;
-            }
-            [JsonProperty("ext-exec-id")]
-            public string ExtExecId
-            {
-                get;
-                set;
-            }
-            [JsonProperty("quantity")]
-            public int Quantity
-            {
-                get;
-                set;
-            }
-            [JsonProperty("fill-price")]
-            public string FillPrice
-            {
-                get;
-                set;
-            }
-            [JsonProperty("filled-at")]
-            public string FilledAt
-            {
-                get;
-                set;
-            }
-        }
         public class Leg
         {
             [JsonProperty("instrument-type")]
@@ -93,13 +60,13 @@ namespace TWLib.Models
                 set;
             }
             [JsonProperty("fills")]
-            public IList<Fill> Fills
+            public IList<object> Fills
             {
                 get;
                 set;
             }
         }
-        public class Item
+        public class Data2
         {
             [JsonProperty("id")]
             public int Id
@@ -161,6 +128,12 @@ namespace TWLib.Models
                 get;
                 set;
             }
+            [JsonProperty("cancelled-at")]
+            public string CancelledAt
+            {
+                get;
+                set;
+            }
             [JsonProperty("editable")]
             public bool Editable
             {
@@ -180,13 +153,7 @@ namespace TWLib.Models
                 set;
             }
             [JsonProperty("updated-at")]
-            public object UpdatedAt
-            {
-                get;
-                set;
-            }
-            [JsonProperty("reject-reason")]
-            public string RejectReason
+            public long UpdatedAt
             {
                 get;
                 set;
@@ -199,15 +166,6 @@ namespace TWLib.Models
             }
             [JsonProperty("legs")]
             public IList<Leg> Legs
-            {
-                get;
-                set;
-            }
-        }
-        public class Data2
-        {
-            [JsonProperty("items")]
-            public IList<Item> Items
             {
                 get;
                 set;

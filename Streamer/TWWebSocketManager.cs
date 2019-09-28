@@ -1,15 +1,30 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+/*   This file is part of TWLib.
+ *
+ *    TWLib is free software: you can redistribute it and/or modify
+ *    it under the terms of the GNU General Public License as published by
+ *    the Free Software Foundation, either version 3 of the License, or
+ *    (at your option) any later version.
+ *
+ *    TWLib is distributed in the hope that it will be useful,
+ *    but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
+ *    GNU General Public License for more details.
+ *
+ *    You should have received a copy of the GNU General Public License
+ *    along with TWLib.  If not, see <https://www.gnu.org/licenses/>.
+ ******************************************************************************
+ *
+ *    Project available from here: https://github.com/martian73/TWLib.git
+ ******************************************************************************
+ */
+using System;
+using System.IO;
+using System.Net;
+using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Net.WebSockets;
-using System.Net;
-using System.IO;
 using TWLib.Streamer.Models;
-using Newtonsoft.Json.Converters;
-using Newtonsoft.Json;
 
 namespace TWLib.Streamer
 {
@@ -26,7 +41,7 @@ namespace TWLib.Streamer
         ClientWebSocket StreamerSocket;
 
         private CookieContainer Cookies;
-        private string UserAgent = "okhttp/3.11.0";
+        private readonly string UserAgent = "okhttp/3.11.0";
 
         protected string StreamerApiUrl { get; set; }
 
@@ -70,7 +85,7 @@ namespace TWLib.Streamer
         public Func<Task> ServerConnected;
         public Func<Task> ServerDisconnected;
 
-    
+
         private void AfterConnect(Task connectTask)
         {
             if (connectTask.IsCompleted)
@@ -187,7 +202,7 @@ namespace TWLib.Streamer
                 throw new Exception("Stream not active.");
 
             string json = request.Serialize();
-            byte [] postBytes = Encoding.UTF8.GetBytes(json);
+            byte[] postBytes = Encoding.UTF8.GetBytes(json);
             StreamerSocket.SendAsync(new System.ArraySegment<byte>(postBytes), WebSocketMessageType.Text, true, CancellationToken.None);
 
             Console.WriteLine("Sending " + request.StreamType.ToString() + ": " + json);
@@ -197,7 +212,7 @@ namespace TWLib.Streamer
         {
             if (!StreamActive)
                 throw new Exception("Stream not active.");
-            
+
             byte[] postBytes = Encoding.UTF8.GetBytes(request);
             StreamerSocket.SendAsync(new System.ArraySegment<byte>(postBytes), WebSocketMessageType.Text, true, CancellationToken.None);
 
@@ -208,7 +223,7 @@ namespace TWLib.Streamer
         {
             if (!StreamActive)
                 throw new Exception("Stream not active.");
-            
+
             StreamerSocket.SendAsync(new System.ArraySegment<byte>(postBytes), WebSocketMessageType.Text, true, CancellationToken.None);
 
             Console.WriteLine("Sending Raw: " + Encoding.UTF8.GetString(postBytes));
@@ -229,7 +244,8 @@ namespace TWLib.Streamer
         {
             // create a request
             HttpWebRequest request = (HttpWebRequest)
-            WebRequest.Create(apiUrl + path); request.KeepAlive = false;
+            WebRequest.Create(apiUrl + path);
+            request.KeepAlive = false;
             request.ProtocolVersion = HttpVersion.Version11;
             request.Method = "GET";
 
@@ -276,3 +292,4 @@ namespace TWLib.Streamer
         }
     }
 }
+

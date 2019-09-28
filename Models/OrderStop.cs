@@ -25,34 +25,61 @@ using System.Collections.Generic;
 
 namespace TWLib.Models
 {
-    public class SymbolSearch
+    public class OrderStop
     {
-        public class Item
+        public class Leg
         {
+            [JsonProperty("instrument-type")]
+            public InstrumentType InstrumentType
+            {
+                get;
+                set;
+            }
             [JsonProperty("symbol")]
             public string Symbol
             {
                 get;
                 set;
             }
-            [JsonProperty("description")]
-            public string Description
+            [JsonProperty("quantity")]
+            public double Quantity
+            {
+                get;
+                set;
+            }
+            [JsonProperty("action")]
+            public Action Action
             {
                 get;
                 set;
             }
         }
-        public class Data2
+        [JsonProperty("order-type")]
+        public OrderType OrderType
         {
-            [JsonProperty("items")]
-            public IList<Item> Items
-            {
-                get;
-                set;
-            }
+            get;
+            set;
         }
-        [JsonProperty("data")]
-        public Data2 Data
+        [JsonProperty("time-in-force")]
+        public TimeInForce TimeInForce
+        {
+            get;
+            set;
+        }
+        [JsonProperty("stop-trigger")]
+        public string StopTrigger
+        {
+            get;
+            set;
+        }
+        [JsonProperty("legs")]
+        public IList<Leg> Legs
+        {
+            get;
+            set;
+        }
+        [JsonProperty("source")]
+        public string Source
         {
             get;
             set;

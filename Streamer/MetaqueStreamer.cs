@@ -1,9 +1,26 @@
-﻿using System;
+/*   This file is part of TWLib.
+ *
+ *    TWLib is free software: you can redistribute it and/or modify
+ *    it under the terms of the GNU General Public License as published by
+ *    the Free Software Foundation, either version 3 of the License, or
+ *    (at your option) any later version.
+ *
+ *    TWLib is distributed in the hope that it will be useful,
+ *    but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
+ *    GNU General Public License for more details.
+ *
+ *    You should have received a copy of the GNU General Public License
+ *    along with TWLib.  If not, see <https://www.gnu.org/licenses/>.
+ ******************************************************************************
+ *
+ *    Project available from here: https://github.com/martian73/TWLib.git
+ ******************************************************************************
+ */
+using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace TWLib.Streamer
 {
@@ -25,7 +42,7 @@ namespace TWLib.Streamer
 
             while (!StreamActive)
                 Thread.Sleep(100);
-            
+
             SendConnect();
 
             while (!Connected)
@@ -34,7 +51,7 @@ namespace TWLib.Streamer
             HeartBeatThread = new Thread(() => { HeartBeatLoop(); });
             HeartBeatThread.Start();
         }
-        
+
         private void SendConnect()
         {
             string str = String.Format(
@@ -95,3 +112,4 @@ namespace TWLib.Streamer
         }
     }
 }
+

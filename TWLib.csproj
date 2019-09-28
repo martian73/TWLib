@@ -46,9 +46,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="DataMemberAwareEnumJsonConverter.cs" />
     <Compile Include="Models\Accounts.cs" />
     <Compile Include="Models\Balances.cs" />
+    <Compile Include="Models\CancelOrderRes.cs" />
     <Compile Include="Models\Cometd.cs" />
     <Compile Include="Models\InstrumentsFutures.cs" />
     <Compile Include="Models\MarginReport.cs" />
@@ -57,6 +57,7 @@
     <Compile Include="Models\Order.cs" />
     <Compile Include="Models\Orders.cs" />
     <Compile Include="Models\OrdersLive.cs" />
+    <Compile Include="Models\OrderStop.cs" />
     <Compile Include="Models\Positions.cs" />
     <Compile Include="Models\PublicWatchlists.cs" />
     <Compile Include="Models\SymbolSearch.cs" />
