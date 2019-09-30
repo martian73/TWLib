@@ -39,7 +39,7 @@ namespace TWLib
         private string Username;
         private string Password;
         public static string APIurl = "https://api.tastyworks.com";
-        private string AuthToken;
+        private string _AuthToken;
         private Accounts _Accounts;
 
         public Accounts Accounts
@@ -64,10 +64,18 @@ namespace TWLib
             KeepAliveThread = null;
             LoggedIn = false;
             Cookies = new CookieContainer();
-            AuthToken = null;
+            _AuthToken = null;
             LoggedInAt = DateTime.MinValue;
             LastValidate = DateTime.MinValue;
             System.Net.ServicePointManager.Expect100Continue = false;
+        }
+
+        public string AuthToken
+        {
+            get
+            {
+                return String.Format(_AuthToken);
+            }
         }
 
         #region Account Logon and Session maintenance     
@@ -76,8 +84,8 @@ namespace TWLib
         {
             Username = username;
             Password = password;
-            AuthToken = GetSessionToken();
-            if (AuthToken != null)
+            _AuthToken = GetSessionToken();
+            if (_AuthToken != null)
             {
                 ValidateSession();
                 return true;
@@ -99,7 +107,7 @@ namespace TWLib
         public void Logout()
         {
             LoggedIn = false;
-            AuthToken = null;
+            _AuthToken = null;
             Cookies = new CookieContainer();
             if (KeepAliveThread != null && KeepAliveThread.ThreadState == System.Threading.ThreadState.Running)
                 KeepAliveThread.Join();
@@ -109,9 +117,9 @@ namespace TWLib
 
         private string GetSessionToken()
         {
-            if (LoggedIn && AuthToken != null)
+            if (LoggedIn && _AuthToken != null)
             {
-                return AuthToken;
+                return _AuthToken;
             }
             string result = null;
             HttpWebResponse response;
@@ -134,7 +142,7 @@ namespace TWLib
                 LoggedIn = false;
                 LoggedInAt = DateTime.MinValue;
                 LastValidate = DateTime.MinValue;
-                AuthToken = null;
+                _AuthToken = null;
                 JObject obj = new JObject();
                 string message = (string)obj.SelectToken("error.message");
                 throw new Exception(message);
@@ -159,7 +167,7 @@ namespace TWLib
 
         public void ValidateSession()
         {
-            if (LoggedIn == false || AuthToken == null)
+            if (LoggedIn == false || _AuthToken == null)
             {
                 LoggedInAt = DateTime.MinValue;
                 LastValidate = DateTime.MinValue;
@@ -168,7 +176,7 @@ namespace TWLib
 
             HttpWebResponse wresponse;
             WebHeaderCollection headers = new WebHeaderCollection();
-            headers.Add("Authorization", AuthToken);
+            headers.Add("Authorization", _AuthToken);
             string response = PostJsonRequest("/sessions/validate", null, out wresponse, headers);
 
             if (wresponse.StatusCode != HttpStatusCode.Created)
@@ -176,7 +184,7 @@ namespace TWLib
                 LoggedIn = false;
                 LoggedInAt = DateTime.MinValue;
                 LastValidate = DateTime.MinValue;
-                AuthToken = null;
+                _AuthToken = null;
                 JObject obj = new JObject();
                 string message = (string)obj.SelectToken("error.message");
                 throw new Exception(message);
@@ -201,27 +209,26 @@ namespace TWLib
 
         public void InitDxfeedStreamer()
         {
-            if (!LoggedIn || AuthToken == null)
+            if (!LoggedIn || _AuthToken == null)
                 throw new Exception("Not logged in.");
             DxfeedClient = new DxfeedStreamer();
-            DxfeedClient.Init(AuthToken);
+            DxfeedClient.Init(_AuthToken);
         }
 
         public void CloseDxfeedStreamer()
         {
             Console.WriteLine("Closing DXFeed.");
             DxfeedClient.Stop();
-            DxfeedClient.Dispose();
             DxfeedClient = null;
         }
 
         public void InitStwStreamer()
         {
-            if (!LoggedIn || AuthToken == null)
+            if (!LoggedIn || _AuthToken == null)
                 throw new Exception("Not logged in.");
 
             TWStreamerClient = new STWStreamer();
-            TWStreamerClient.Init(AuthToken);
+            TWStreamerClient.Init(_AuthToken);
             _Accounts = GetAccounts();
             List<string> accountsId = new List<string>();
 
@@ -267,7 +274,7 @@ namespace TWLib
             Accounts accounts = new Accounts();
             HttpWebResponse wresponse;
             WebHeaderCollection headers = new WebHeaderCollection();
-            headers.Add("Authorization", AuthToken);
+            headers.Add("Authorization", _AuthToken);
             string response = GetJsonRequest("/customers/me/accounts", out wresponse, headers);
 
             if (wresponse.StatusCode != HttpStatusCode.OK)
@@ -275,7 +282,7 @@ namespace TWLib
                 LoggedIn = false;
                 LoggedInAt = DateTime.MinValue;
                 LastValidate = DateTime.MinValue;
-                AuthToken = null;
+                _AuthToken = null;
                 JObject obj = new JObject();
                 string message = (string)obj.SelectToken("error.message");
                 throw new Exception(message);
@@ -301,7 +308,7 @@ namespace TWLib
             Balances balances = new Balances();
             HttpWebResponse wresponse;
             WebHeaderCollection headers = new WebHeaderCollection();
-            headers.Add("Authorization", AuthToken);
+            headers.Add("Authorization", _AuthToken);
             string response = GetJsonRequest("/accounts/" + accountName + "/balances", out wresponse, headers);
 
             if (wresponse.StatusCode != HttpStatusCode.OK)
@@ -309,7 +316,7 @@ namespace TWLib
                 LoggedIn = false;
                 LoggedInAt = DateTime.MinValue;
                 LastValidate = DateTime.MinValue;
-                AuthToken = null;
+                _AuthToken = null;
                 JObject obj = new JObject();
                 string message = (string)obj.SelectToken("error.message");
                 throw new Exception(message);
@@ -335,7 +342,7 @@ namespace TWLib
             OrdersLive OrdersLive = new OrdersLive();
             HttpWebResponse wresponse;
             WebHeaderCollection headers = new WebHeaderCollection();
-            headers.Add("Authorization", AuthToken);
+            headers.Add("Authorization", _AuthToken);
             string response = GetJsonRequest("/accounts/" + accountName + "/orders/live", out wresponse, headers);
 
             if (wresponse.StatusCode != HttpStatusCode.OK)
@@ -343,7 +350,7 @@ namespace TWLib
                 LoggedIn = false;
                 LoggedInAt = DateTime.MinValue;
                 LastValidate = DateTime.MinValue;
-                AuthToken = null;
+                _AuthToken = null;
                 JObject obj = new JObject();
                 string message = (string)obj.SelectToken("error.message");
                 throw new Exception(message);
@@ -368,7 +375,7 @@ namespace TWLib
             TradingStatus TradingStatus = new TradingStatus();
             HttpWebResponse wresponse;
             WebHeaderCollection headers = new WebHeaderCollection();
-            headers.Add("Authorization", AuthToken);
+            headers.Add("Authorization", _AuthToken);
             string response = GetJsonRequest("/accounts/" + accountName + "/trading-status", out wresponse, headers);
 
             if (wresponse.StatusCode != HttpStatusCode.OK)
@@ -376,7 +383,7 @@ namespace TWLib
                 LoggedIn = false;
                 LoggedInAt = DateTime.MinValue;
                 LastValidate = DateTime.MinValue;
-                AuthToken = null;
+                _AuthToken = null;
                 JObject obj = new JObject();
                 string message = (string)obj.SelectToken("error.message");
                 throw new Exception(message);
@@ -402,7 +409,7 @@ namespace TWLib
             MarginReport MarginReport = new MarginReport();
             HttpWebResponse wresponse;
             WebHeaderCollection headers = new WebHeaderCollection();
-            headers.Add("Authorization", AuthToken);
+            headers.Add("Authorization", _AuthToken);
             string response = GetJsonRequest("/margin/accounts/" + accountName + "/report", out wresponse, headers);
 
             if (wresponse.StatusCode != HttpStatusCode.OK)
@@ -410,7 +417,7 @@ namespace TWLib
                 LoggedIn = false;
                 LoggedInAt = DateTime.MinValue;
                 LastValidate = DateTime.MinValue;
-                AuthToken = null;
+                _AuthToken = null;
                 JObject obj = new JObject();
                 string message = (string)obj.SelectToken("error.message");
                 throw new Exception(message);
@@ -435,7 +442,7 @@ namespace TWLib
             Positions positions = new Positions();
             HttpWebResponse wresponse;
             WebHeaderCollection headers = new WebHeaderCollection();
-            headers.Add("Authorization", AuthToken);
+            headers.Add("Authorization", _AuthToken);
             string uri = String.Format("/accounts/{0}/positions?include_closed_positions={1}", accountName, include_closed_positions.ToString());
             string response = GetJsonRequest(uri, out wresponse, headers);
 
@@ -444,7 +451,7 @@ namespace TWLib
                 LoggedIn = false;
                 LoggedInAt = DateTime.MinValue;
                 LastValidate = DateTime.MinValue;
-                AuthToken = null;
+                _AuthToken = null;
                 JObject obj = new JObject();
                 string message = (string)obj.SelectToken("error.message");
                 throw new Exception(message);
@@ -469,7 +476,7 @@ namespace TWLib
             MarketMetrics metrics = new MarketMetrics();
             HttpWebResponse wresponse;
             WebHeaderCollection headers = new WebHeaderCollection();
-            headers.Add("Authorization", AuthToken);
+            headers.Add("Authorization", _AuthToken);
             string uri = String.Format("/market-metrics?symbols={0}", symbol);
             string response = GetJsonRequest(uri, out wresponse, headers);
 
@@ -478,7 +485,7 @@ namespace TWLib
                 LoggedIn = false;
                 LoggedInAt = DateTime.MinValue;
                 LastValidate = DateTime.MinValue;
-                AuthToken = null;
+                _AuthToken = null;
                 JObject obj = new JObject();
                 string message = (string)obj.SelectToken("error.message");
                 throw new Exception(message);
@@ -507,7 +514,7 @@ namespace TWLib
 
             HttpWebResponse wresponse;
             WebHeaderCollection headers = new WebHeaderCollection();
-            headers.Add("Authorization", AuthToken);
+            headers.Add("Authorization", _AuthToken);
             string response = GetJsonRequest("/symbols/search/" + HttpUtility.UrlEncode(symbol), out wresponse, headers);
 
             if (wresponse.StatusCode != HttpStatusCode.OK)
@@ -515,7 +522,7 @@ namespace TWLib
                 LoggedIn = false;
                 LoggedInAt = DateTime.MinValue;
                 LastValidate = DateTime.MinValue;
-                AuthToken = null;
+                _AuthToken = null;
                 JObject obj = new JObject();
                 string message = (string)obj.SelectToken("error.message");
                 throw new Exception(message);
@@ -540,7 +547,7 @@ namespace TWLib
 
             HttpWebResponse wresponse;
             WebHeaderCollection headers = new WebHeaderCollection();
-            headers.Add("Authorization", AuthToken);
+            headers.Add("Authorization", _AuthToken);
             string response = GetJsonRequest("/option-chains/" + HttpUtility.UrlEncode(symbol) + "/nested", out wresponse, headers);
 
             if (wresponse.StatusCode != HttpStatusCode.OK)
@@ -548,7 +555,7 @@ namespace TWLib
                 LoggedIn = false;
                 LoggedInAt = DateTime.MinValue;
                 LastValidate = DateTime.MinValue;
-                AuthToken = null;
+                _AuthToken = null;
                 JObject obj = new JObject();
                 string message = (string)obj.SelectToken("error.message");
                 throw new Exception(message);
@@ -587,7 +594,7 @@ namespace TWLib
             MarketMetrics metrics = new MarketMetrics();
             HttpWebResponse wresponse;
             WebHeaderCollection headers = new WebHeaderCollection();
-            headers.Add("Authorization", AuthToken);
+            headers.Add("Authorization", _AuthToken);
             headers.Add("Accept-Encoding", "gzip, deflate");
             string uri = String.Format("/accounts/{0}/orders", accountID);
             string payload = JsonConvert.SerializeObject(order);
@@ -614,7 +621,7 @@ namespace TWLib
 
             HttpWebResponse wresponse;
             WebHeaderCollection headers = new WebHeaderCollection();
-            headers.Add("Authorization", AuthToken);
+            headers.Add("Authorization", _AuthToken);
             headers.Add("Accept-Encoding", "gzip, deflate");
             string uri = String.Format("/accounts/{0}/orders/{1}", accountID, orderID);
             string response = SendDeleteRequest(uri, out wresponse, headers);

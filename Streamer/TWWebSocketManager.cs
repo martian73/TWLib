@@ -25,6 +25,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using TWLib.Streamer.Models;
+using WebSocketSharp;
 
 namespace TWLib.Streamer
 {
@@ -35,13 +36,13 @@ namespace TWLib.Streamer
             StreamActive = false;
             Cookies = new CookieContainer();
             Token = TokenSource.Token;
-            StreamerSocket = new ClientWebSocket();
         }
 
-        ClientWebSocket StreamerSocket;
+        WebSocketSharp.WebSocket StreamerSocket;
 
         private CookieContainer Cookies;
         private readonly string UserAgent = "okhttp/3.11.0";
+        private Thread RunLoopThread = null;
 
         protected string StreamerApiUrl { get; set; }
 
@@ -70,123 +71,94 @@ namespace TWLib.Streamer
 
         protected void Start()
         {
-            StreamerSocket = new ClientWebSocket();
-            StreamerSocket.ConnectAsync(new System.Uri(StreamerWebsocketUrl),
-                CancellationToken.None).ContinueWith(AfterConnect);
+            if (RunLoopThread != null)
+                return;
+
+            RunLoopThread = new Thread(() => { RunLoop(); });
+            RunLoopThread.Start();
         }
 
-        public WebSocketState GetStreamerSocketState()
+        public void SendPing()
         {
             if (StreamerSocket != null)
-                return StreamerSocket.State;
-            return WebSocketState.None;
-        }
-
-        public Func<Task> ServerConnected;
-        public Func<Task> ServerDisconnected;
-
-
-        private void AfterConnect(Task connectTask)
-        {
-            if (connectTask.IsCompleted)
             {
-                Task.Run(async () =>
-                {
-                    StreamActive = true;
-                    ServerConnected?.Invoke();
-                    await DataReceiver(Token);
-                }, Token);
-            }
-            else
-            {
-                StreamActive = false;
-                ServerDisconnected?.Invoke();
+                StreamerSocket.Ping();
             }
         }
 
-        private async Task DataReceiver(CancellationToken? cancelToken = null)
+        private void RunLoop()
         {
-            cancelToken = cancelToken ?? CancellationToken.None;
-            try
+            using (StreamerSocket = new WebSocketSharp.WebSocket(StreamerWebsocketUrl))
             {
-                #region Wait-for-Data
-
-                while (true)
+                StreamActive = true;
+                StreamerSocket.WaitTime = new TimeSpan(0, 0, 0, 0, 100);
+                StreamerSocket.SslConfiguration.EnabledSslProtocols = System.Security.Authentication.SslProtocols.Tls12;
+                StreamerSocket.OnMessage += StreamerSocket_OnMessage;
+                StreamerSocket.OnError += StreamerSocket_OnError;
+                StreamerSocket.OnClose += StreamerSocket_OnClose;
+                StreamerSocket.OnOpen += StreamerSocket_OnOpen;
+                StreamerSocket.Connect();
+                StreamerSocket.Log.Output = new Action<LogData, string>((data, message) =>
                 {
-                    cancelToken?.ThrowIfCancellationRequested();
-
-                    byte[] data = await MessageReadAsync(cancelToken.Value);
-                    Task unawaited = Task.Run(() => MessageReceived(data), Token);
+                    Console.WriteLine("Log: " + data.Date.ToString() + " " + message);
+                });
+                while (StreamActive)
+                {
+                    Thread.Sleep(100);
                 }
 
-                #endregion
-            }
-            catch (OperationCanceledException)
-            {
-            }
-            catch (WebSocketException)
-            {
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("*** DataReceiver server " + StreamerWebsocketUrl + " disconnected");
-                Console.WriteLine("Exception: DataReceiver" + e.Message + "\r\n" + e.StackTrace);
-            }
-            finally
-            {
-                StreamActive = false;
-                ServerDisconnected?.Invoke();
+                StreamerSocket.Close();
             }
         }
 
-        private async Task<byte[]> MessageReadAsync(CancellationToken token)
+        private void StreamerSocket_OnOpen(object sender, EventArgs e)
         {
-            /*
-             *
-             * Do not catch exceptions, let them get caught by the data reader
-             * to destroy the connection
-             *
-             */
-
-            if (StreamerSocket == null)
-                return null;
-
-            byte[] buffer = new byte[65536];
-            byte[] data = null;
-
-            WebSocketReceiveResult receiveResult = null;
-
-            using (MemoryStream dataMs = new MemoryStream())
-            {
-                buffer = new byte[65536];
-                ArraySegment<byte> bufferSegment = new ArraySegment<byte>(buffer);
-
-                while (StreamerSocket.State == WebSocketState.Open)
-                {
-                    receiveResult = await StreamerSocket.ReceiveAsync(bufferSegment, token);
-                    if (receiveResult.Count > 0)
-                    {
-                        await dataMs.WriteAsync(buffer, 0, receiveResult.Count);
-                    }
-
-                    if (receiveResult.EndOfMessage
-                        || receiveResult.CloseStatus == WebSocketCloseStatus.Empty
-                        || receiveResult.MessageType == WebSocketMessageType.Close)
-                    {
-                        data = dataMs.ToArray();
-                        break;
-                    }
-                }
-            }
-            return data;
+            Console.WriteLine("Stream Open");
+            ServerConnected?.Invoke(sender, e);
+            StreamActive = true;
         }
+
+        private void StreamerSocket_OnClose(object sender, CloseEventArgs e)
+        {
+            Console.WriteLine("Stream closed.");
+            ServerDisconnected?.Invoke(sender, e);
+            StreamActive = false;
+            RunLoopThread.Join();
+        }
+
+        private void StreamerSocket_OnError(object sender, WebSocketSharp.ErrorEventArgs e)
+        {
+            Console.WriteLine("Stream error: " + e.Message);
+            StreamActive = false;
+        }
+
+        private void StreamerSocket_OnMessage(object sender, MessageEventArgs e)
+        {
+           Task.Run(() =>
+           {
+               if (e.IsPing)
+               {
+                   Console.WriteLine("Pinged by server.");
+               }
+               else if (e.IsBinary)
+               {
+                   Console.WriteLine("Binary data.");
+               }
+               else if (e.IsText)
+                   this.ReceiveResponse(e.Data);
+           });
+        }
+
+        public event EventHandler ServerConnected;
+        public event EventHandler ServerDisconnected;
+
 
         protected virtual void Dispose(bool disposing)
         {
             if (disposing)
             {
                 TokenSource.Cancel();
-                StreamerSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "closing", new CancellationToken(false));
+                StreamerSocket.CloseAsync();
             }
         }
 
@@ -202,8 +174,10 @@ namespace TWLib.Streamer
                 throw new Exception("Stream not active.");
 
             string json = request.Serialize();
-            byte[] postBytes = Encoding.UTF8.GetBytes(json);
-            StreamerSocket.SendAsync(new System.ArraySegment<byte>(postBytes), WebSocketMessageType.Text, true, CancellationToken.None);
+            StreamerSocket.SendAsync(json, new Action<bool>((completed) => {
+             
+            }));
+
 
             Console.WriteLine("Sending " + request.StreamType.ToString() + ": " + json);
         }
@@ -214,7 +188,8 @@ namespace TWLib.Streamer
                 throw new Exception("Stream not active.");
 
             byte[] postBytes = Encoding.UTF8.GetBytes(request);
-            StreamerSocket.SendAsync(new System.ArraySegment<byte>(postBytes), WebSocketMessageType.Text, true, CancellationToken.None);
+            StreamerSocket.SendAsync(request, new Action<bool>((completed) => {
+            }));
 
             Console.WriteLine("Sending Raw: " + request);
         }
@@ -224,21 +199,16 @@ namespace TWLib.Streamer
             if (!StreamActive)
                 throw new Exception("Stream not active.");
 
-            StreamerSocket.SendAsync(new System.ArraySegment<byte>(postBytes), WebSocketMessageType.Text, true, CancellationToken.None);
+            StreamerSocket.SendAsync(postBytes, new Action<bool>((completed) => {
+
+            }));
 
             Console.WriteLine("Sending Raw: " + Encoding.UTF8.GetString(postBytes));
         }
 
         public abstract void ReceiveResponse(string response);
 
-        private async Task MessageReceived(byte[] buffer)
-        {
-            if (buffer != null)
-            {
-                string retval = Encoding.UTF8.GetString(buffer);
-                await Task.Run(() => { ReceiveResponse(retval); });
-            }
-        }
+
 
         public string GetJsonRequest(string apiUrl, string path, out HttpWebResponse response, WebHeaderCollection headers = null)
         {

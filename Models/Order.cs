@@ -22,19 +22,169 @@
 
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using System;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
 
 namespace TWLib.Models
 {
-    [JsonConverter(typeof(StringEnumConverter))] public enum OrderType {[EnumMember(Value = "Market")] MARKET, [EnumMember(Value = "Limit")] LIMIT, [EnumMember(Value = "Stop")] STOPMARKET, [EnumMember(Value = "Stop Limit")] STOPLIMIT }
-    [JsonConverter(typeof(StringEnumConverter))] public enum TimeInForce {[EnumMember(Value = "Day")] DAY, [EnumMember(Value = "GTC")] GTC, [EnumMember(Value = "GTD")] GTD, [EnumMember(Value = "Ext")] EXT }
-    [JsonConverter(typeof(StringEnumConverter))] public enum Action {[EnumMember(Value = "Buy to Open")] BUYTOOPEN, [EnumMember(Value = "Buy to Close")] BUYTOCLOSE, [EnumMember(Value = "Sell to Close")] SELLTOCLOSE, [EnumMember(Value = "Sell to Open")] SELLTOOPEN }
-    [JsonConverter(typeof(StringEnumConverter))] public enum PriceEffect {[EnumMember(Value = "Debit")] DEBIT, [EnumMember(Value = "Credit")] CREDIT }
-    [JsonConverter(typeof(StringEnumConverter))] public enum InstrumentType {[EnumMember(Value = "Equity")] EQUITY, [EnumMember(Value = "Equity Option")] EQUITYOPTION, [EnumMember(Value = "Future")] FUTURE }
-    [JsonConverter(typeof(StringEnumConverter))] public enum QuantityDirection {[EnumMember(Value = "Long")] LONG, [EnumMember(Value = "Short")] SHORT }
+    [JsonConverter(typeof(StringEnumConverter))]
+    public enum OrderType
+    {
+        [EnumMember(Value = "Market")]
+        MARKET,
+        [EnumMember(Value = "Limit")]
+        LIMIT,
+        [EnumMember(Value = "Stop")]
+        STOPMARKET,
+        [EnumMember(Value = "Stop Limit")]
+        STOPLIMIT
+    }
+
+    [JsonConverter(typeof(StringEnumConverter))]
+    public enum TimeInForce
+    {
+        [EnumMember(Value = "Day")]
+        DAY,
+        [EnumMember(Value = "GTC")]
+        GTC,
+        [EnumMember(Value = "GTD")]
+        GTD,
+        [EnumMember(Value = "Ext")]
+        EXT
+
+    }
+    [JsonConverter(typeof(StringEnumConverter))]
+    public enum Action
+    {
+        [EnumMember(Value = "Buy to Open")]
+        BUYTOOPEN,
+        [EnumMember(Value = "Buy to Close")]
+        BUYTOCLOSE,
+        [EnumMember(Value = "Sell to Close")]
+        SELLTOCLOSE,
+        [EnumMember(Value = "Sell to Open")]
+        SELLTOOPEN
+    }
+
+
+    [JsonConverter(typeof(StringEnumConverter))]
+    public enum PriceEffect
+    {
+        [EnumMember(Value = "Debit")]
+        DEBIT,
+        [EnumMember(Value = "Credit")]
+        CREDIT
+    }
+
+    [JsonConverter(typeof(StringEnumConverter))]
+    public enum InstrumentType
+    {
+        [EnumMember(Value = "Equity")]
+        EQUITY,
+        [EnumMember(Value = "Equity Option")]
+        EQUITYOPTION,
+        [EnumMember(Value = "Future")]
+        FUTURE
+    }
+
+    [JsonConverter(typeof(StringEnumConverter))]
+    public enum QuantityDirection
+    {
+        [EnumMember(Value = "Long")]
+        LONG,
+        [EnumMember(Value = "Short")]
+        SHORT
+    }
+
     public class Order
     {
+
+
+        public static Order GetLimitOrder(string symbol, InstrumentType instrumentType, double price, int quantity, PriceEffect priceEffect, TWLib.Models.Action action, TimeInForce tif = TimeInForce.DAY)
+        {
+            Order order = new Order();
+            order.OrderType = OrderType.LIMIT;
+            order.Price = price.ToString("0.00");
+
+            switch (action)
+            {
+                case TWLib.Models.Action.BUYTOOPEN:
+                case TWLib.Models.Action.BUYTOCLOSE:
+                    order.PriceEffect = PriceEffect.DEBIT;
+                    break;
+                default:
+                    order.PriceEffect = PriceEffect.CREDIT;
+                    break;
+            }
+            order.Source = "android";
+            order.TimeInForce = tif;
+            order.Legs = new List<Order.Leg>();
+            Order.Leg leg = new Order.Leg();
+            leg.Action = action;
+            leg.InstrumentType = instrumentType;
+            leg.Symbol = symbol;
+            leg.Quantity = quantity;
+            order.Legs.Add(leg);
+
+            return order;
+        }
+
+        public static Order GetMarketOrder(string symbol, InstrumentType instrumentType, int quantity, TWLib.Models.Action action, TimeInForce tif = TimeInForce.DAY)
+        {
+            Order order = new Order();
+            order.OrderType = OrderType.MARKET;
+            order.Price = "";
+
+            switch (action)
+            {
+                case TWLib.Models.Action.BUYTOOPEN:
+                case TWLib.Models.Action.BUYTOCLOSE:
+                    order.PriceEffect = PriceEffect.DEBIT;
+                    break;
+                default:
+                    order.PriceEffect = PriceEffect.CREDIT;
+                    break;
+            }
+
+            order.Source = "android";
+            order.TimeInForce = tif;
+            order.Legs = new List<Order.Leg>();
+            Order.Leg leg = new Order.Leg();
+            leg.Action = action;
+            leg.InstrumentType = instrumentType;
+            leg.Symbol = symbol;
+            leg.Quantity = quantity;
+            order.Legs.Add(leg);
+            return order;
+        }
+
+        public static OrderStop GetStopMarketOrder(string symbol, InstrumentType instrumentType, double stopTrigger, int quantity, TWLib.Models.Action action, TimeInForce tif = TimeInForce.DAY)
+        {
+
+            if (action == TWLib.Models.Action.BUYTOOPEN || action == TWLib.Models.Action.SELLTOOPEN)
+                throw new Exception("Invalid order.  Unable to initiate a possition with a stop order.");
+
+            int contracts = quantity;
+
+            OrderStop order = new OrderStop();
+            order.OrderType = OrderType.STOPMARKET;
+            order.StopTrigger = stopTrigger.ToString("0.00");
+            order.Source = "android";
+            order.TimeInForce = tif;
+            order.Legs = new List<OrderStop.Leg>();
+            OrderStop.Leg leg = new OrderStop.Leg();
+
+            leg.Action = action;
+
+            leg.InstrumentType = instrumentType;
+            leg.Symbol = symbol;
+            leg.Quantity = contracts;
+            order.Legs.Add(leg);
+
+            return order;
+        }
+
         public class Leg
         {
             [JsonProperty("instrument-type")]

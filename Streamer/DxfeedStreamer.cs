@@ -23,6 +23,7 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Threading;
+using System.Threading.Tasks;
 using TWLib.Streamer.Models;
 
 namespace TWLib.Streamer
@@ -100,9 +101,21 @@ namespace TWLib.Streamer
 
         protected override void HeartBeatLoop()
         {
+            TimeSpan heartBeatSpan = new TimeSpan(0, 0, 10);
+            DateTime lastBeat = DateTime.UtcNow;
+
+            Console.WriteLine("DxFeed HeartBeatLoop starting.");
             while (StreamActive)
             {
-                Thread.Sleep(500);
+                
+                if (lastBeat.Add(heartBeatSpan) < DateTime.UtcNow)
+                {
+                    DxfeedMetaConnectReq req = new DxfeedMetaConnectReq(ClientID, 0);
+                    SendRequest(req);
+                    lastBeat = DateTime.UtcNow;
+                }
+                Thread.Sleep(100);
+
             }
             Console.WriteLine("Exiting DxFeedStreamer HeartBeatLoop.");
         }
@@ -119,16 +132,25 @@ namespace TWLib.Streamer
             StreamTokens = GetQuoteStreamerTokens();
             StreamerWebsocketUrl = (StreamTokens.Data.WebsocketUrl + "/cometd").Replace("https://", "wss://");
             StreamerApiUrl = StreamTokens.Data.StreamerUrl;
-
-
-            HeartBeatThread = new Thread(() => { HeartBeatLoop(); });
-            HeartBeatThread.Start();
+            ServerConnected += DxfeedStreamer_ServerConnected;
+            ServerDisconnected += DxfeedStreamer_ServerDisconnected;
 
             Start();
 
-            while (!StreamActive)
+            while(_State != DxFeedStreamState.READY)
+            {
                 Thread.Sleep(100);
+            }
+        }
 
+        private void DxfeedStreamer_ServerDisconnected(object sender, EventArgs e)
+        {
+            Console.WriteLine("DxFeed disconnected.");
+        }
+
+        private void DxfeedStreamer_ServerConnected(object sender, EventArgs e)
+        {
+            Console.WriteLine("DxFeed connected.");
             DxfeedMetaHandshakeReq req = new DxfeedMetaHandshakeReq(0, 60000, StreamTokens.Data.Token);
             SendRequest(req);
         }
@@ -200,6 +222,13 @@ namespace TWLib.Streamer
                     Interval = mcr.Advice.Interval;
                     Timeout = mcr.Advice.Timeout;
                     _State = DxFeedStreamState.READY;
+
+                    if (HeartBeatThread == null)
+                    {
+                        HeartBeatThread = new Thread(() => { HeartBeatLoop(); });
+                        HeartBeatThread.Start();
+                    }
+
                     break;
                 case DxfeedChannel.SERVICEDATA:
                     Console.WriteLine("Convo Channel: /service/data");
@@ -271,7 +300,7 @@ namespace TWLib.Streamer
                     }
                 }
             }
-            Console.WriteLine("Received: \r\n" + response);
+            Console.WriteLine(DateTime.UtcNow.ToString("u") + " Received: \r\n" + response);
         }
 
         private StreamerTokens GetQuoteStreamerTokens()
