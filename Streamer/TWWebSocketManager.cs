@@ -20,7 +20,6 @@
 using System;
 using System.IO;
 using System.Net;
-using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -58,7 +57,6 @@ namespace TWLib.Streamer
         }
 
         protected bool StreamActive { get; set; }
-        private readonly SemaphoreSlim SendLock = new SemaphoreSlim(1);
         private CancellationToken Token;
         private CancellationTokenSource TokenSource = new CancellationTokenSource();
 
@@ -91,17 +89,14 @@ namespace TWLib.Streamer
             using (StreamerSocket = new WebSocketSharp.WebSocket(StreamerWebsocketUrl))
             {
                 StreamActive = true;
-                StreamerSocket.WaitTime = new TimeSpan(0, 0, 0, 0, 100);
+                StreamerSocket.WaitTime = new TimeSpan(0, 0, 0, 0, 10000);
                 StreamerSocket.SslConfiguration.EnabledSslProtocols = System.Security.Authentication.SslProtocols.Tls12;
                 StreamerSocket.OnMessage += StreamerSocket_OnMessage;
                 StreamerSocket.OnError += StreamerSocket_OnError;
                 StreamerSocket.OnClose += StreamerSocket_OnClose;
                 StreamerSocket.OnOpen += StreamerSocket_OnOpen;
                 StreamerSocket.Connect();
-                StreamerSocket.Log.Output = new Action<LogData, string>((data, message) =>
-                {
-                    Console.WriteLine("Log: " + data.Date.ToString() + " " + message);
-                });
+
                 while (StreamActive)
                 {
                     Thread.Sleep(100);
@@ -134,19 +129,19 @@ namespace TWLib.Streamer
 
         private void StreamerSocket_OnMessage(object sender, MessageEventArgs e)
         {
-           Task.Run(() =>
-           {
-               if (e.IsPing)
-               {
-                   Console.WriteLine("Pinged by server.");
-               }
-               else if (e.IsBinary)
-               {
-                   Console.WriteLine("Binary data.");
-               }
-               else if (e.IsText)
-                   this.ReceiveResponse(e.Data);
-           });
+            Task.Run(() =>
+            {
+                if (e.IsPing)
+                {
+                    Console.WriteLine("Pinged by server.");
+                }
+                else if (e.IsBinary)
+                {
+                    Console.WriteLine("Binary data.");
+                }
+                else if (e.IsText)
+                    this.ReceiveResponse(e.Data);
+            });
         }
 
         public event EventHandler ServerConnected;
@@ -158,7 +153,7 @@ namespace TWLib.Streamer
             if (disposing)
             {
                 TokenSource.Cancel();
-                StreamerSocket.CloseAsync();
+                StreamerSocket.Close();
             }
         }
 
@@ -173,11 +168,16 @@ namespace TWLib.Streamer
             if (!StreamActive)
                 throw new Exception("Stream not active.");
 
-            string json = request.Serialize();
-            StreamerSocket.SendAsync(json, new Action<bool>((completed) => {
-             
-            }));
+            if (request is DxfeedRequest)
+            {
+                if (((DxfeedRequest)request).Id == null)
+                {
+                    Console.WriteLine("Null id!!!!!");
+                }
+            }
 
+            string json = request.Serialize();
+            StreamerSocket.Send(json);
 
             Console.WriteLine("Sending " + request.StreamType.ToString() + ": " + json);
         }
@@ -188,8 +188,7 @@ namespace TWLib.Streamer
                 throw new Exception("Stream not active.");
 
             byte[] postBytes = Encoding.UTF8.GetBytes(request);
-            StreamerSocket.SendAsync(request, new Action<bool>((completed) => {
-            }));
+            StreamerSocket.Send(request);
 
             Console.WriteLine("Sending Raw: " + request);
         }
@@ -199,9 +198,7 @@ namespace TWLib.Streamer
             if (!StreamActive)
                 throw new Exception("Stream not active.");
 
-            StreamerSocket.SendAsync(postBytes, new Action<bool>((completed) => {
-
-            }));
+            StreamerSocket.Send(postBytes);
 
             Console.WriteLine("Sending Raw: " + Encoding.UTF8.GetString(postBytes));
         }

@@ -186,120 +186,131 @@ namespace TWLib.Streamer
 
         public override void SendRequest(TWRequest request)
         {
-            if (request.StreamType != StreamType.DXFEED)
-                throw new Exception("Invalid request type");
-
-            // Add it to the list of conversations
-            DxfeedRequest dxReq = (DxfeedRequest)request;
-            int id = GetNextRequestID();
-            dxReq.Id = id.ToString();
-            DxConvo convo = new DxConvo();
-            convo.Sent = DateTime.UtcNow;
-            convo.Request = (DxfeedRequest)request;
-            DxfeedConversations.Add(id, convo);
-
-            // Call base to send it through the web socket
-            base.SendRequest(request);
-        }
-
-        public void HandleConversation(int id)
-        {
-            DxConvo convo = DxfeedConversations[id];
-            switch (convo.Response.Channel)
+            if (request is DxfeedRequest)
             {
-                case DxfeedChannel.METAHANDSHAKE:
-                    Console.WriteLine("Convo Channel: /meta/handshake: Setting clientID");
-                    ClientID = ((DxfeedMetaHandshakeRes)convo.Response).ClientId;
-                    DxfeedMetaConnectReq req = new DxfeedMetaConnectReq(ClientID, 0);
-                    SendRequest(req);
-                    _State = DxFeedStreamState.CONNECT;
-                    break;
-                case DxfeedChannel.METACONNECT:
-                    Console.WriteLine("Convo Channel: /meta/connect: Setting Interval and Timeout");
-                    DxfeedMetaConnectRes mcr = (DxfeedMetaConnectRes)convo.Response;
-                    if (!mcr.Successful)
-                        throw new Exception("Failed connect.");
-                    Interval = mcr.Advice.Interval;
-                    Timeout = mcr.Advice.Timeout;
-                    _State = DxFeedStreamState.READY;
+                if (request.StreamType != StreamType.DXFEED)
+                    throw new Exception("Invalid request type");
 
-                    if (HeartBeatThread == null)
-                    {
-                        HeartBeatThread = new Thread(() => { HeartBeatLoop(); });
-                        HeartBeatThread.Start();
-                    }
+                // Add it to the list of conversations
+                int id = GetNextRequestID();
+                ((DxfeedRequest)request).Id = id.ToString();
+                Console.WriteLine("DxFeed request: " + JsonConvert.SerializeObject(request));
 
-                    break;
-                case DxfeedChannel.SERVICEDATA:
-                    Console.WriteLine("Convo Channel: /service/data");
-                    break;
-                case DxfeedChannel.SERVICESTATE:
-                    Console.WriteLine("Convo Channel: /service/state");
-                    break;
-                case DxfeedChannel.SERVICESUB:
-                    Console.WriteLine("Convo Channel: /service/sub");
-                    break;
-                default:
-                    throw new Exception("Unhandled channel");
+                // Call base to send it through the web socket
+                base.SendRequest(request);
             }
-            DxfeedConversations.Remove(id);
+            else
+            {
+                throw new Exception("Not a DXfeed Request.");
+            }
         }
+
+        //public void HandleConversation(int id)
+        //{
+        //    DxConvo convo = DxfeedConversations[id];
+        //    switch (convo.Response.Channel)
+        //    {
+        //        case DxfeedChannel.METAHANDSHAKE:
+        //            Console.WriteLine("Convo Channel: /meta/handshake: Setting clientID");
+        //            ClientID = ((DxfeedMetaHandshakeRes)convo.Response).ClientId;
+        //            DxfeedMetaConnectReq req = new DxfeedMetaConnectReq(ClientID, 0);
+        //            SendRequest(req);
+        //            _State = DxFeedStreamState.CONNECT;
+        //            break;
+        //        case DxfeedChannel.METACONNECT:
+        //            Console.WriteLine("Convo Channel: /meta/connect: Setting Interval and Timeout");
+        //            DxfeedMetaConnectRes mcr = (DxfeedMetaConnectRes)convo.Response;
+        //            if (!mcr.Successful)
+        //                throw new Exception("Failed connect.");
+        //            Interval = mcr.Advice.Interval;
+        //            Timeout = mcr.Advice.Timeout;
+        //            _State = DxFeedStreamState.READY;
+
+        //            if (HeartBeatThread == null)
+        //            {
+        //                HeartBeatThread = new Thread(() => { HeartBeatLoop(); });
+        //                HeartBeatThread.Start();
+        //            }
+
+        //            break;
+        //        case DxfeedChannel.SERVICEDATA:
+        //            Console.WriteLine("Convo Channel: /service/data");
+        //            break;
+        //        case DxfeedChannel.SERVICESTATE:
+        //            Console.WriteLine("Convo Channel: /service/state");
+        //            break;
+        //        case DxfeedChannel.SERVICESUB:
+        //            Console.WriteLine("Convo Channel: /service/sub");
+        //            break;
+        //        default:
+        //            throw new Exception("Unhandled channel");
+        //    }
+        //    DxfeedConversations.Remove(id);
+        //}
 
         public override void ReceiveResponse(string response)
         {
             // start with serializing the base object, DxfeedResponse, and switch on channel
-            DxfeedResponse[] resArr = JsonConvert.DeserializeObject<DxfeedResponse[]>(response);
+            List<object> resArr = JsonConvert.DeserializeObject<List<object>>(response);
 
-            if (resArr.Length != 1)
-                throw new Exception("Not expecting multiple elements in the array");
-
-            DxfeedResponse res = resArr[0];
-            DxfeedResponse finalRes = res;
-
-            switch (res.Channel)
+            foreach (object obj in resArr)
             {
-                case DxfeedChannel.METAHANDSHAKE:
-                    Console.WriteLine("/meta/handshake");
-                    resArr = JsonConvert.DeserializeObject<DxfeedMetaHandshakeRes[]>(response);
-                    if (resArr.Length != 1)
-                        throw new Exception("Not expecting multiple elements in the array");
-                    finalRes = resArr[0];
-                    break;
-                case DxfeedChannel.METACONNECT:
-                    Console.WriteLine("/meta/connect");
-                    resArr = JsonConvert.DeserializeObject<DxfeedMetaConnectRes[]>(response);
-                    if (resArr.Length != 1)
-                        throw new Exception("Not expecting multiple elements in the array");
-                    finalRes = resArr[0];
-                    break;
-                case DxfeedChannel.SERVICEDATA:
-                    Console.WriteLine("/service/data");
-                    break;
-                case DxfeedChannel.SERVICESTATE:
-                    Console.WriteLine("/service/state");
-                    break;
-                case DxfeedChannel.SERVICESUB:
-                    Console.WriteLine("/service/sub");
-                    break;
-                default:
-                    break;
-            }
+                string root = obj.ToString();
+                DxfeedResponse res = (DxfeedResponse)JsonConvert.DeserializeObject<DxfeedResponse>(root);
 
-            // match conversation (request/response) parts by ID if we can
-            if (finalRes.Id != null)
-            {
-                int id;
-
-                if (Int32.TryParse(finalRes.Id, out id))
+                switch (res.Channel)
                 {
-                    if (DxfeedConversations.ContainsKey(id))
-                    {
-                        DxfeedConversations[id].Received = DateTime.UtcNow;
-                        DxfeedConversations[id].Response = finalRes;
-                        HandleConversation(id);
-                    }
+                    case DxfeedChannel.METAHANDSHAKE:
+                        Console.WriteLine("/meta/handshake");
+                        DxfeedMetaHandshakeRes hsRes = JsonConvert.DeserializeObject<DxfeedMetaHandshakeRes>(root);
+                        ClientID = hsRes.ClientId;
+                        DxfeedMetaConnectReq req = new DxfeedMetaConnectReq(ClientID, 0);
+                        SendRequest(req);
+                        break;
+                    case DxfeedChannel.METACONNECT:
+                        Console.WriteLine("/meta/connect");
+                        DxfeedMetaConnectRes mcr = JsonConvert.DeserializeObject<DxfeedMetaConnectRes>(root);
+                        if (!mcr.Successful)
+                            throw new Exception("Failed connect.");
+                        Interval = mcr.Advice.Interval;
+                        Timeout = mcr.Advice.Timeout;
+                        _State = DxFeedStreamState.READY;
+
+                        if (HeartBeatThread == null)
+                        {
+                            HeartBeatThread = new Thread(() => { HeartBeatLoop(); });
+                            HeartBeatThread.Start();
+                        }
+                        break;
+                    case DxfeedChannel.SERVICEDATA:
+                        Console.WriteLine("/service/data");
+                        break;
+                    case DxfeedChannel.SERVICESTATE:
+                        Console.WriteLine("/service/state");
+                        break;
+                    case DxfeedChannel.SERVICESUB:
+                        Console.WriteLine("/service/sub");
+                        break;
+                    default:
+                        break;
                 }
             }
+
+            //// match conversation (request/response) parts by ID if we can
+            //if (finalRes.Id != null)
+            //{
+            //    int id;
+
+            //    if (Int32.TryParse(finalRes.Id, out id))
+            //    {
+            //        if (DxfeedConversations.ContainsKey(id))
+            //        {
+            //            DxfeedConversations[id].Received = DateTime.UtcNow;
+            //            DxfeedConversations[id].Response = finalRes;
+            //            HandleConversation(id);
+            //        }
+            //    }
+            //}
             Console.WriteLine(DateTime.UtcNow.ToString("u") + " Received: \r\n" + response);
         }
 
