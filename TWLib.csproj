@@ -82,6 +82,7 @@
     <Compile Include="Streamer\Models\StwAccountSubscribeReq.cs" />
     <Compile Include="Streamer\Models\StwRequest.cs" />
     <Compile Include="Streamer\Models\StwResponse.cs" />
+    <Compile Include="Streamer\Notifier.cs" />
     <Compile Include="Streamer\STWStreamer.cs" />
     <Compile Include="Streamer\Models\StreamerTokens.cs" />
     <Compile Include="Streamer\Models\TWRequest.cs" />

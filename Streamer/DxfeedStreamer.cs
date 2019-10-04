@@ -110,11 +110,11 @@ namespace TWLib.Streamer
                 
                 if (lastBeat.Add(heartBeatSpan) < DateTime.UtcNow)
                 {
-                    DxfeedMetaConnectReq req = new DxfeedMetaConnectReq(ClientID, 0);
+                    DxfeedMetaConnectReq req = new DxfeedMetaConnectReq(ClientID, 1);
                     SendRequest(req);
                     lastBeat = DateTime.UtcNow;
                 }
-                Thread.Sleep(100);
+                Thread.Sleep(10);
 
             }
             Console.WriteLine("Exiting DxFeedStreamer HeartBeatLoop.");
@@ -250,6 +250,9 @@ namespace TWLib.Streamer
 
         public override void ReceiveResponse(string response)
         {
+            if (!StreamActive)
+                return;
+
             // start with serializing the base object, DxfeedResponse, and switch on channel
             List<object> resArr = JsonConvert.DeserializeObject<List<object>>(response);
 
@@ -258,41 +261,49 @@ namespace TWLib.Streamer
                 string root = obj.ToString();
                 DxfeedResponse res = (DxfeedResponse)JsonConvert.DeserializeObject<DxfeedResponse>(root);
 
-                switch (res.Channel)
+                try
                 {
-                    case DxfeedChannel.METAHANDSHAKE:
-                        Console.WriteLine("/meta/handshake");
-                        DxfeedMetaHandshakeRes hsRes = JsonConvert.DeserializeObject<DxfeedMetaHandshakeRes>(root);
-                        ClientID = hsRes.ClientId;
-                        DxfeedMetaConnectReq req = new DxfeedMetaConnectReq(ClientID, 0);
-                        SendRequest(req);
-                        break;
-                    case DxfeedChannel.METACONNECT:
-                        Console.WriteLine("/meta/connect");
-                        DxfeedMetaConnectRes mcr = JsonConvert.DeserializeObject<DxfeedMetaConnectRes>(root);
-                        if (!mcr.Successful)
-                            throw new Exception("Failed connect.");
-                        Interval = mcr.Advice.Interval;
-                        Timeout = mcr.Advice.Timeout;
-                        _State = DxFeedStreamState.READY;
+                    switch (res.Channel)
+                    {
+                        case DxfeedChannel.METAHANDSHAKE:
+                            Console.WriteLine("/meta/handshake");
+                            DxfeedMetaHandshakeRes hsRes = JsonConvert.DeserializeObject<DxfeedMetaHandshakeRes>(root);
+                            ClientID = hsRes.ClientId;
+                            DxfeedMetaConnectReq req = new DxfeedMetaConnectReq(ClientID, 0);
+                            SendRequest(req);
+                            break;
+                        case DxfeedChannel.METACONNECT:
+                            Console.WriteLine("/meta/connect");
+                            DxfeedMetaConnectRes mcr = JsonConvert.DeserializeObject<DxfeedMetaConnectRes>(root);
+                            if (!mcr.Successful)
+                                throw new Exception("Failed connect.");
+                            Interval = mcr.Advice.Interval;
+                            Timeout = mcr.Advice.Timeout;
+                            _State = DxFeedStreamState.READY;
 
-                        if (HeartBeatThread == null)
-                        {
-                            HeartBeatThread = new Thread(() => { HeartBeatLoop(); });
-                            HeartBeatThread.Start();
-                        }
-                        break;
-                    case DxfeedChannel.SERVICEDATA:
-                        Console.WriteLine("/service/data");
-                        break;
-                    case DxfeedChannel.SERVICESTATE:
-                        Console.WriteLine("/service/state");
-                        break;
-                    case DxfeedChannel.SERVICESUB:
-                        Console.WriteLine("/service/sub");
-                        break;
-                    default:
-                        break;
+                            if (HeartBeatThread == null)
+                            {
+                                HeartBeatThread = new Thread(() => { HeartBeatLoop(); });
+                                HeartBeatThread.Start();
+                            }
+                            break;
+                        case DxfeedChannel.SERVICEDATA:
+                            Console.WriteLine("/service/data");
+                            break;
+                        case DxfeedChannel.SERVICESTATE:
+                            Console.WriteLine("/service/state");
+                            break;
+                        case DxfeedChannel.SERVICESUB:
+                            Console.WriteLine("/service/sub");
+                            break;
+                        default:
+                            break;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Error Rx: " + ex.Message);
+                    Restart();
                 }
             }
 

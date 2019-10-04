@@ -56,11 +56,14 @@ namespace TWLib.Streamer
             return id;
         }
 
+
         protected bool StreamActive { get; set; }
         private CancellationToken Token;
         private CancellationTokenSource TokenSource = new CancellationTokenSource();
 
         protected Thread HeartBeatThread { get; set; }
+        protected Thread MessagePumpThread { get; set; }
+        private Notifier nf;
 
         protected abstract void HeartBeatLoop();
         public abstract void Init(string authToken);
@@ -86,17 +89,18 @@ namespace TWLib.Streamer
 
         private void RunLoop()
         {
+            using (nf = new Notifier())
             using (StreamerSocket = new WebSocketSharp.WebSocket(StreamerWebsocketUrl))
             {
                 StreamActive = true;
                 StreamerSocket.WaitTime = new TimeSpan(0, 0, 0, 0, 10000);
                 StreamerSocket.SslConfiguration.EnabledSslProtocols = System.Security.Authentication.SslProtocols.Tls12;
-                StreamerSocket.OnMessage += StreamerSocket_OnMessage;
+                StreamerSocket.OnMessage += (sender, e) => nf.Notify(e.Data);
                 StreamerSocket.OnError += StreamerSocket_OnError;
                 StreamerSocket.OnClose += StreamerSocket_OnClose;
                 StreamerSocket.OnOpen += StreamerSocket_OnOpen;
                 StreamerSocket.Connect();
-
+                nf.OnMessage = OnMessage;
                 while (StreamActive)
                 {
                     Thread.Sleep(100);
@@ -127,21 +131,9 @@ namespace TWLib.Streamer
             StreamActive = false;
         }
 
-        private void StreamerSocket_OnMessage(object sender, MessageEventArgs e)
+        private void OnMessage(string str)
         {
-            Task.Run(() =>
-            {
-                if (e.IsPing)
-                {
-                    Console.WriteLine("Pinged by server.");
-                }
-                else if (e.IsBinary)
-                {
-                    Console.WriteLine("Binary data.");
-                }
-                else if (e.IsText)
-                    this.ReceiveResponse(e.Data);
-            });
+            this.ReceiveResponse(str);
         }
 
         public event EventHandler ServerConnected;
