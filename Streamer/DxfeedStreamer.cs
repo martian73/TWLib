@@ -178,11 +178,24 @@ namespace TWLib.Streamer
             Console.WriteLine("Exiting Dxfeed.");
         }
 
-        public void AddSymbolsSubscription(List<string> symbols)
+        public void AddEquitySubscription(List<string> symbols)
         {
-            DxfeedServiceSubAddReq req = new DxfeedServiceSubAddReq(ClientID, symbols);
+            DxfeedServiceSubAddReq req = new DxfeedServiceSubAddReq(ClientID, symbols, TWLib.Models.UnderlyingType.EQUITY);
             SendRequest(req);
         }
+
+        public void AddFutureSubscription(List<string> symbols)
+        {
+            DxfeedServiceSubAddReq req = new DxfeedServiceSubAddReq(ClientID, symbols, TWLib.Models.UnderlyingType.FUTURE);
+            SendRequest(req);
+        }
+
+        public void AddOptionSubscription(List<string> options)
+        {
+            DxfeedServiceSubAddReq req = new DxfeedServiceSubAddReq(ClientID, options, TWLib.Models.UnderlyingType.EQUITY_OPTION);
+            SendRequest(req);
+        }
+
 
         public override void SendRequest(TWRequest request)
         {
@@ -204,49 +217,6 @@ namespace TWLib.Streamer
                 throw new Exception("Not a DXfeed Request.");
             }
         }
-
-        //public void HandleConversation(int id)
-        //{
-        //    DxConvo convo = DxfeedConversations[id];
-        //    switch (convo.Response.Channel)
-        //    {
-        //        case DxfeedChannel.METAHANDSHAKE:
-        //            Console.WriteLine("Convo Channel: /meta/handshake: Setting clientID");
-        //            ClientID = ((DxfeedMetaHandshakeRes)convo.Response).ClientId;
-        //            DxfeedMetaConnectReq req = new DxfeedMetaConnectReq(ClientID, 0);
-        //            SendRequest(req);
-        //            _State = DxFeedStreamState.CONNECT;
-        //            break;
-        //        case DxfeedChannel.METACONNECT:
-        //            Console.WriteLine("Convo Channel: /meta/connect: Setting Interval and Timeout");
-        //            DxfeedMetaConnectRes mcr = (DxfeedMetaConnectRes)convo.Response;
-        //            if (!mcr.Successful)
-        //                throw new Exception("Failed connect.");
-        //            Interval = mcr.Advice.Interval;
-        //            Timeout = mcr.Advice.Timeout;
-        //            _State = DxFeedStreamState.READY;
-
-        //            if (HeartBeatThread == null)
-        //            {
-        //                HeartBeatThread = new Thread(() => { HeartBeatLoop(); });
-        //                HeartBeatThread.Start();
-        //            }
-
-        //            break;
-        //        case DxfeedChannel.SERVICEDATA:
-        //            Console.WriteLine("Convo Channel: /service/data");
-        //            break;
-        //        case DxfeedChannel.SERVICESTATE:
-        //            Console.WriteLine("Convo Channel: /service/state");
-        //            break;
-        //        case DxfeedChannel.SERVICESUB:
-        //            Console.WriteLine("Convo Channel: /service/sub");
-        //            break;
-        //        default:
-        //            throw new Exception("Unhandled channel");
-        //    }
-        //    DxfeedConversations.Remove(id);
-        //}
 
         public override void ReceiveResponse(string response)
         {
@@ -307,21 +277,6 @@ namespace TWLib.Streamer
                 }
             }
 
-            //// match conversation (request/response) parts by ID if we can
-            //if (finalRes.Id != null)
-            //{
-            //    int id;
-
-            //    if (Int32.TryParse(finalRes.Id, out id))
-            //    {
-            //        if (DxfeedConversations.ContainsKey(id))
-            //        {
-            //            DxfeedConversations[id].Received = DateTime.UtcNow;
-            //            DxfeedConversations[id].Response = finalRes;
-            //            HandleConversation(id);
-            //        }
-            //    }
-            //}
             Console.WriteLine(DateTime.UtcNow.ToString("u") + " Received: \r\n" + response);
         }
 

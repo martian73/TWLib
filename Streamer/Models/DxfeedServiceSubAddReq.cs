@@ -34,15 +34,25 @@ namespace TWLib.Streamer.Models
 
         }
 
-        public DxfeedServiceSubAddReq(string clientId, List<string> symbols)
+        public DxfeedServiceSubAddReq(string clientId, List<string> symbols, TWLib.Models.UnderlyingType type)
         {
             ClientId = clientId;
             Data = new Data2();
             Data.Add = new Add2();
-            Data.Add.Profile = symbols;
+
             Data.Add.Quote = symbols;
-            Data.Add.Summary = symbols;
             Data.Add.Trade = symbols;
+
+            if (type == TWLib.Models.UnderlyingType.EQUITY || type == TWLib.Models.UnderlyingType.FUTURE)
+            {
+                Data.Add.Profile = symbols;
+                Data.Add.Summary = symbols;
+            }
+            else if (type == TWLib.Models.UnderlyingType.EQUITY_OPTION)
+            {
+                Data.Add.Greeks = symbols;
+                Data.Add.TheoPrice = symbols;
+            }
         }
 
         public class Add2
@@ -53,8 +63,14 @@ namespace TWLib.Streamer.Models
             [JsonProperty("Quote")]
             public IList<string> Quote { get; set; }
 
+            [JsonProperty("Greeks")]
+            public IList<string> Greeks { get; set; }
+
             [JsonProperty("Summary")]
             public IList<string> Summary { get; set; }
+
+            [JsonProperty("TheoPrice")]
+            public IList<string> TheoPrice { get; set; }
 
             [JsonProperty("Profile")]
             public IList<string> Profile { get; set; }

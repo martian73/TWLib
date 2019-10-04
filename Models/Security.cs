@@ -24,7 +24,8 @@ namespace TWLib.Models
     public enum UnderlyingType
     {
         EQUITY = 1,
-        FUTURE = 2
+        FUTURE = 2,
+        EQUITY_OPTION = 3
     }
     public class Security { }
 }

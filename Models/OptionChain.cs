@@ -22,8 +22,10 @@
 
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
+using System;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
+using System.Text.RegularExpressions;
 
 namespace TWLib.Models
 {
@@ -78,6 +80,38 @@ namespace TWLib.Models
                 get;
                 set;
             }
+
+            public static string GetStreamerSymbol(string chainSymbol)
+            {
+                //.SPY191007C293
+                //SPY   191004C00185000
+
+                string retval = null;
+                Regex regex = new Regex(@"^(?<symbol>\S+)\s+(?<year>\d\d)(?<month>\d\d)(?<day>\d\d)(?<type>C|P)(?<strike>[0-9]{5})(?<strikethou>[0-9]{3})$");
+                Match match = regex.Match(chainSymbol);
+
+                double strikeThou = 0.0;
+                double strike = 0.0;
+
+                if (match.Success)
+                {
+                    if (double.TryParse(match.Groups["strike"].Value.ToString(), out strike) &&
+                        double.TryParse(match.Groups["strikethou"].Value.ToString(), out strikeThou))
+                    {
+                        retval = String.Format(".{0}{1}{2}{3}{4}{5}{6}",
+                            match.Groups["symbol"].Value.ToString(),
+                            match.Groups["month"].Value.ToString(),
+                            match.Groups["day"].Value.ToString(),
+                            match.Groups["year"].Value.ToString(),
+                            match.Groups["type"].Value.ToString(),
+                            strike.ToString().TrimStart('0'),
+                            strikeThou == 0.0 ? "" : "." + strikeThou.ToString().TrimEnd('0'));
+                    }
+                }
+
+                return retval;
+            }
+
             [JsonProperty("percent")]
             public string Percent
             {

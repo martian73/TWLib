@@ -571,13 +571,19 @@ namespace TWLib
             return chains;
         }
         #endregion
-        public void AddSymbolsSubscription(List<string> symbols)
+        public void AddEquitySubscription(List<string> symbols)
         {
-            DxfeedClient.AddSymbolsSubscription(symbols);
+            DxfeedClient.AddEquitySubscription(symbols);
 
             foreach (string symbol in symbols)
                 MetaqueueClient.SubscribeMarketMetrics(symbol);
         }
+
+        public void AddOptionSubscription(List<string> symbols)
+        {
+            DxfeedClient.AddOptionSubscription(symbols);
+        }
+
         public Orders ExecuteOrder(string accountID, object order)
         {
             if (!(order is Order || order is OrderStop))
