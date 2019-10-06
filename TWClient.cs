@@ -575,8 +575,11 @@ namespace TWLib
         {
             DxfeedClient.AddEquitySubscription(symbols);
 
-            foreach (string symbol in symbols)
-                MetaqueueClient.SubscribeMarketMetrics(symbol);
+            if (MetaqueueClient != null)
+            {
+                foreach (string symbol in symbols)
+                    MetaqueueClient.SubscribeMarketMetrics(symbol);
+            }
         }
 
         public void AddOptionSubscription(List<string> symbols)

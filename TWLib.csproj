@@ -73,8 +73,9 @@
     <Compile Include="Streamer\Models\DxfeedMetaHandshakeRes.cs" />
     <Compile Include="Streamer\Models\DxfeedMetaHandshakeReq.cs" />
     <Compile Include="Streamer\Models\DxfeedResponse.cs" />
+    <Compile Include="Streamer\Models\DxfeedServiceSubAddOptionReq.cs" />
     <Compile Include="Streamer\Models\DxfeedServiceDataRes.cs" />
-    <Compile Include="Streamer\Models\DxfeedServiceSubAddReq.cs" />
+    <Compile Include="Streamer\Models\DxfeedServiceSubAddEquityReq.cs" />
     <Compile Include="Streamer\Models\Enumerations.cs" />
     <Compile Include="Streamer\Models\StreamerRequest.cs" />
     <Compile Include="Models\TradingStatus.cs" />

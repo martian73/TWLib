@@ -42,6 +42,9 @@ namespace TWLib.Streamer.Models
         [JsonConverter(typeof(StringEnumConverter))]
         public DxfeedChannel Channel { get; set; }
 
+        [JsonProperty("error")]
+        public string Error { get; set; }
+
         public override string Serialize()
         {
             return JsonConvert.SerializeObject(this);

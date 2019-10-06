@@ -180,19 +180,20 @@ namespace TWLib.Streamer
 
         public void AddEquitySubscription(List<string> symbols)
         {
-            DxfeedServiceSubAddReq req = new DxfeedServiceSubAddReq(ClientID, symbols, TWLib.Models.UnderlyingType.EQUITY);
+
+            DxfeedServiceSubAddEquityReq req = new DxfeedServiceSubAddEquityReq(ClientID, symbols);
             SendRequest(req);
         }
 
         public void AddFutureSubscription(List<string> symbols)
         {
-            DxfeedServiceSubAddReq req = new DxfeedServiceSubAddReq(ClientID, symbols, TWLib.Models.UnderlyingType.FUTURE);
+            DxfeedServiceSubAddEquityReq req = new DxfeedServiceSubAddEquityReq(ClientID, symbols);
             SendRequest(req);
         }
 
         public void AddOptionSubscription(List<string> options)
         {
-            DxfeedServiceSubAddReq req = new DxfeedServiceSubAddReq(ClientID, options, TWLib.Models.UnderlyingType.EQUITY_OPTION);
+            DxfeedServiceSubAddOptionReq req = new DxfeedServiceSubAddOptionReq(ClientID, options);
             SendRequest(req);
         }
 
@@ -207,7 +208,7 @@ namespace TWLib.Streamer
                 // Add it to the list of conversations
                 int id = GetNextRequestID();
                 ((DxfeedRequest)request).Id = id.ToString();
-                Console.WriteLine("DxFeed request: " + JsonConvert.SerializeObject(request));
+                //Console.WriteLine("DxFeed request: " + JsonConvert.SerializeObject(request));
 
                 // Call base to send it through the web socket
                 base.SendRequest(request);
@@ -230,6 +231,12 @@ namespace TWLib.Streamer
             {
                 string root = obj.ToString();
                 DxfeedResponse res = (DxfeedResponse)JsonConvert.DeserializeObject<DxfeedResponse>(root);
+
+                if (res.Error != null && res.Error.Length > 0)
+                {
+                    Console.WriteLine("Error: " + res.Error);
+                    continue;
+                }
 
                 try
                 {
@@ -273,6 +280,7 @@ namespace TWLib.Streamer
                 catch (Exception ex)
                 {
                     Console.WriteLine("Error Rx: " + ex.Message);
+                    Console.WriteLine("Request: " + response);
                     Restart();
                 }
             }
