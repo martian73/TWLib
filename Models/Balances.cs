@@ -21,6 +21,7 @@
 // http://www.xamasoft.com/json-class-generator
 
 using Newtonsoft.Json;
+using System.Collections.Generic;
 
 namespace TWLib.Models
 {

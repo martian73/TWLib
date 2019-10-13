@@ -100,9 +100,9 @@ namespace TWLib.Models
                     {
                         retval = String.Format(".{0}{1}{2}{3}{4}{5}{6}",
                             match.Groups["symbol"].Value.ToString(),
+                            match.Groups["year"].Value.ToString(),
                             match.Groups["month"].Value.ToString(),
                             match.Groups["day"].Value.ToString(),
-                            match.Groups["year"].Value.ToString(),
                             match.Groups["type"].Value.ToString(),
                             strike.ToString().TrimStart('0'),
                             strikeThou == 0.0 ? "" : "." + strikeThou.ToString().TrimEnd('0'));

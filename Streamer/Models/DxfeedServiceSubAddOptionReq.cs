@@ -43,29 +43,28 @@ namespace TWLib.Streamer.Models
             Data.Add.Quote = symbols;
             Data.Add.Greeks = symbols;
             Data.Add.Trade = symbols;
-            Data.Add.Profile = symbols;
             Data.Add.Summary = symbols;
         }
 
+        // [{"id":4,"clientId":"auroer7g4j8i0wo0k3vl6fahzxei","channel":"/service/sub","data":{"add":{"Quote":[".SPY191004P291",".SPY191004P292"],"Greeks":[".SPY191004P291",".SPY191004P292"],"Trade":[".SPY191004P291",".SPY191004P292"],"Summary":[".SPY191004P291",".SPY191004P292"],"TheoPrice":[".SPY191004P291",".SPY191004P292"]}}}]
+
         public class Add2
         {
-            [JsonProperty("Trade")]
-            public IList<string> Trade { get; set; }
-
             [JsonProperty("Quote")]
             public IList<string> Quote { get; set; }
-
-            [JsonProperty("TheoPrice")]
-            public IList<string> TheoPrice { get; set; }
 
             [JsonProperty("Greeks")]
             public IList<string> Greeks { get; set; }
 
+            [JsonProperty("Trade")]
+            public IList<string> Trade { get; set; }
+
             [JsonProperty("Summary")]
             public IList<string> Summary { get; set; }
 
-            [JsonProperty("Profile")]
-            public IList<string> Profile { get; set; }
+            [JsonProperty("TheoPrice")]
+            public IList<string> TheoPrice { get; set; }
+
         }
 
         public class Data2

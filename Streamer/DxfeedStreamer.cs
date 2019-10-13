@@ -75,6 +75,12 @@ namespace TWLib.Streamer
 
         private DxFeedStreamState _State = DxFeedStreamState.NONE;
 
+        public EventHandler<ServiceData[]> QuoteCallback = null;
+
+        protected void DefaultQuoteCallback(ServiceData[] quote)
+        {
+        }
+
         public DxFeedStreamState State
         {
             get
@@ -240,6 +246,8 @@ namespace TWLib.Streamer
 
                 try
                 {
+                    Console.WriteLine(DateTime.UtcNow.ToString("u") + " Received: \r\n" + response);
+
                     switch (res.Channel)
                     {
                         case DxfeedChannel.METAHANDSHAKE:
@@ -265,6 +273,8 @@ namespace TWLib.Streamer
                             }
                             break;
                         case DxfeedChannel.SERVICEDATA:
+                            DxfeedServiceDataRes dxSerDataRes = JsonConvert.DeserializeObject<DxfeedServiceDataRes>(root);
+                            QuoteCallback?.Invoke(this, dxSerDataRes.ServiceData);
                             Console.WriteLine("/service/data");
                             break;
                         case DxfeedChannel.SERVICESTATE:
@@ -285,7 +295,6 @@ namespace TWLib.Streamer
                 }
             }
 
-            Console.WriteLine(DateTime.UtcNow.ToString("u") + " Received: \r\n" + response);
         }
 
         private StreamerTokens GetQuoteStreamerTokens()
