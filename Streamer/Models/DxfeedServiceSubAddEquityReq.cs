@@ -26,6 +26,7 @@ using System.Collections.Generic;
 
 namespace TWLib.Streamer.Models
 {
+
     public class DxfeedServiceSubAddEquityReq : DxfeedRequest
     {
 
@@ -34,15 +35,28 @@ namespace TWLib.Streamer.Models
 
         }
 
-        public DxfeedServiceSubAddEquityReq(string clientId, List<string> symbols)
+        public DxfeedServiceSubAddEquityReq(string clientId, List<string> symbols, int profiles =
+            (int)ServiceDataType.PROFILE |
+            (int)ServiceDataType.QUOTE |
+            (int)ServiceDataType.SUMMARY |
+            (int)ServiceDataType.TRADE)
         {
+
             ClientId = clientId;
             Data = new Data2();
             Data.Add = new Add2();
-            Data.Add.Profile = symbols;
-            Data.Add.Quote = symbols;
-            Data.Add.Summary = symbols;
-            Data.Add.Trade = symbols;
+
+            if ((profiles & (int)ServiceDataType.PROFILE) > 0)
+                Data.Add.Profile = symbols;
+
+            if ((profiles & (int)ServiceDataType.QUOTE) > 0)
+                Data.Add.Quote = symbols;
+
+            if ((profiles & (int)ServiceDataType.SUMMARY) > 0)
+                Data.Add.Summary = symbols;
+
+            if ((profiles & (int)ServiceDataType.TRADE) > 0)
+                Data.Add.Trade = symbols;
         }
 
         public class Add2

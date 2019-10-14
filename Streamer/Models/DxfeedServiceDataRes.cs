@@ -179,8 +179,25 @@ namespace TWLib.Streamer.Models
                     return list.ToArray();
                 }
 
-                Console.WriteLine("Unsupported data: ");
+                if (type.CompareTo("Profile") == 0)
+                {
+                    headerCount = Profile.Headers.Length;
+                    for (int idx = 0; idx < data.Count; idx += headerCount)
+                    {
+                        for (int hdr = 0; hdr < headerCount; ++hdr)
+                        {
+                            dict.Add(Profile.Headers[hdr], data[idx + hdr]);
+                        }
+
+                        Profile prof = JsonConvert.DeserializeObject<Profile>(JsonConvert.SerializeObject(dict));
+                        dict.Clear();
+                        list.Add(prof);
+                    }
+                    return list.ToArray();
+                }
+
                 Console.WriteLine(JsonConvert.SerializeObject(Data));
+                Console.WriteLine("Unsupported data: ");
 
                 return null;
             }

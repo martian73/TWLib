@@ -34,16 +34,35 @@ namespace TWLib.Streamer.Models
 
         }
 
-        public DxfeedServiceSubAddOptionReq(string clientId, List<string> symbols)
+        public DxfeedServiceSubAddOptionReq(string clientId, List<string> symbols, int profiles =
+            (int)ServiceDataType.THEOPRICE |
+            (int)ServiceDataType.QUOTE |
+            (int)ServiceDataType.SUMMARY |
+            (int)ServiceDataType.TRADE |
+            (int)ServiceDataType.GREEKS)
         {
             ClientId = clientId;
             Data = new Data2();
             Data.Add = new Add2();
-            Data.Add.TheoPrice = symbols;
-            Data.Add.Quote = symbols;
-            Data.Add.Greeks = symbols;
-            Data.Add.Trade = symbols;
-            Data.Add.Summary = symbols;
+
+            if ((profiles & (int)ServiceDataType.GREEKS) > 0)
+                Data.Add.Greeks = symbols;
+
+            if ((profiles & (int)ServiceDataType.QUOTE) > 0)
+                Data.Add.Quote = symbols;
+
+            if ((profiles & (int)ServiceDataType.SUMMARY) > 0)
+                Data.Add.Summary = symbols;
+
+            if ((profiles & (int)ServiceDataType.TRADE) > 0)
+                Data.Add.Trade = symbols;
+
+            if ((profiles & (int)ServiceDataType.THEOPRICE) > 0)
+                Data.Add.TheoPrice = symbols;
+
+            ClientId = clientId;
+            Data = new Data2();
+            Data.Add = new Add2();
         }
 
         // [{"id":4,"clientId":"auroer7g4j8i0wo0k3vl6fahzxei","channel":"/service/sub","data":{"add":{"Quote":[".SPY191004P291",".SPY191004P292"],"Greeks":[".SPY191004P291",".SPY191004P292"],"Trade":[".SPY191004P291",".SPY191004P292"],"Summary":[".SPY191004P291",".SPY191004P292"],"TheoPrice":[".SPY191004P291",".SPY191004P292"]}}}]

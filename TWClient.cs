@@ -23,12 +23,14 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading;
 using System.Web;
 using TWLib.Models;
 using TWLib.Streamer;
+using TWLib.Streamer.Models;
 
 namespace TWLib
 {
@@ -41,6 +43,8 @@ namespace TWLib
         public static string APIurl = "https://api.tastyworks.com";
         private string _AuthToken;
         private Accounts _Accounts;
+        private bool _Running = true;
+
 
         public Accounts Accounts
         {
@@ -49,9 +53,13 @@ namespace TWLib
                 return _Accounts;
             }
         }
-        public DxfeedStreamer DxfeedClient;
-        public STWStreamer TWStreamerClient;
-        public MetaqueStreamer MetaqueueClient;
+
+        private Thread DxfeedThread;
+        private DxfeedStreamer DxfeedClient;
+        public EventHandler<ServiceData[]> QuoteCallback = null;
+
+        private STWStreamer TWStreamerClient;
+        private MetaqueStreamer MetaqueueClient;
         private DateTime LoggedInAt;
         private DateTime LastValidate;
         private CookieContainer Cookies;
@@ -59,8 +67,23 @@ namespace TWLib
         private readonly string UserAgent = "okhttp/3.11.0";
         private Thread KeepAliveThread = null;
 
+        private List<string> Watchlist;
+
+        public void AddWatchlistSymbols(List<string> list)
+        {
+            Watchlist = Watchlist.Union(list).ToList();
+            AddEquitySubscription(Watchlist, (int)ServiceDataType.QUOTE | (int)ServiceDataType.TRADE);
+        }
+
+        public void SetWatchlistSymbols(List<String> list)
+        {
+            Watchlist = list;
+            AddEquitySubscription(list, (int)ServiceDataType.QUOTE | (int)ServiceDataType.TRADE);
+        }
+
         public TWClient()
         {
+            DxfeedThread = null;
             KeepAliveThread = null;
             LoggedIn = false;
             Cookies = new CookieContainer();
@@ -68,6 +91,7 @@ namespace TWLib
             LoggedInAt = DateTime.MinValue;
             LastValidate = DateTime.MinValue;
             System.Net.ServicePointManager.Expect100Continue = false;
+            Watchlist = new List<string>();
         }
 
         public string AuthToken
@@ -109,6 +133,10 @@ namespace TWLib
             LoggedIn = false;
             _AuthToken = null;
             Cookies = new CookieContainer();
+
+            if (DxfeedClient != null && DxfeedClient.State == Streamer.Models.DxFeedStreamState.READY)
+                DxfeedClient.Stop();
+
             if (KeepAliveThread != null && KeepAliveThread.ThreadState == System.Threading.ThreadState.Running)
                 KeepAliveThread.Join();
             KeepAliveThread = null;
@@ -207,17 +235,51 @@ namespace TWLib
             }
         }
 
+        void DxfeedQuoteCallback(object Sender, ServiceData[] data)
+        {
+            QuoteCallback?.Invoke(Sender, data);
+        }
+
+        public void DxFeedLoop()
+        {
+            Console.WriteLine("TWClient: Starting Dxfeed.");
+            while (_Running)
+            {
+                DxfeedClient = new DxfeedStreamer();
+                DxfeedClient.Init(_AuthToken);
+                
+                DxfeedClient.QuoteCallback += DxfeedQuoteCallback;
+
+                Console.WriteLine("TWClient: Dxfeed ready.");
+
+                if (Watchlist != null && Watchlist.Count > 0)
+                    DxfeedClient.AddEquitySubscription(Watchlist, (int)ServiceDataType.QUOTE | (int)ServiceDataType.TRADE);
+
+                do
+                {
+                    Thread.Sleep(100);
+                } while (DxfeedClient.State == Streamer.Models.DxFeedStreamState.READY);
+
+                Console.WriteLine("TWClient: Restarting Dxfeed.");
+                CloseDxfeedStreamer();
+            }
+        }
+
         public void InitDxfeedStreamer()
         {
             if (!LoggedIn || _AuthToken == null)
-                throw new Exception("Not logged in.");
-            DxfeedClient = new DxfeedStreamer();
-            DxfeedClient.Init(_AuthToken);
+                throw new Exception("TWClient: Not logged in.");
+
+            if (DxfeedThread == null)
+            {
+                DxfeedThread = new Thread(() => { DxFeedLoop(); });
+                DxfeedThread.Start();
+            }
         }
 
         public void CloseDxfeedStreamer()
         {
-            Console.WriteLine("Closing DXFeed.");
+            Console.WriteLine("TWClient: Closing DXFeed.");
             DxfeedClient.Stop();
             DxfeedClient = null;
         }
@@ -225,7 +287,7 @@ namespace TWLib
         public void InitStwStreamer()
         {
             if (!LoggedIn || _AuthToken == null)
-                throw new Exception("Not logged in.");
+                throw new Exception("TWClient: Not logged in.");
 
             TWStreamerClient = new STWStreamer();
             TWStreamerClient.Init(_AuthToken);
@@ -244,7 +306,7 @@ namespace TWLib
 
         public void CloseStwStreamer()
         {
-            Console.WriteLine("Closing StwStreamer");
+            Console.WriteLine("TWClient: Closing StwStreamer");
             TWStreamerClient.Stop();
             TWStreamerClient.Dispose();
             TWStreamerClient = null;
@@ -258,7 +320,7 @@ namespace TWLib
 
         public void CloseMetaqueStreamer()
         {
-            Console.WriteLine("Closing MetaqueueStreamer");
+            Console.WriteLine("TWClient: Closing MetaqueueStreamer");
             MetaqueueClient.Stop();
             MetaqueueClient.Dispose();
             MetaqueueClient = null;
@@ -270,7 +332,7 @@ namespace TWLib
         {
             ValidateSession();
             if (LoggedIn == false)
-                throw new Exception("Not logged in");
+                throw new Exception("TWClient: Not logged in");
             Accounts accounts = new Accounts();
             HttpWebResponse wresponse;
             WebHeaderCollection headers = new WebHeaderCollection();
@@ -500,6 +562,40 @@ namespace TWLib
             return metrics;
         }
 
+        public InstrumentsFutures InstrumentsFutures()
+        {
+            ValidateSession();
+
+            if (LoggedIn == false)
+                throw new Exception("Not logged in");
+
+            InstrumentsFutures instruments = new InstrumentsFutures();
+            HttpWebResponse wresponse;
+            WebHeaderCollection headers = new WebHeaderCollection();
+            headers.Add("Authorization", _AuthToken);
+            string uri = "/instruments/futures";
+            string response = GetJsonRequest(uri, out wresponse, headers);
+
+            if (wresponse.StatusCode != HttpStatusCode.OK)
+            {
+                LoggedIn = false;
+                LoggedInAt = DateTime.MinValue;
+                LastValidate = DateTime.MinValue;
+                _AuthToken = null;
+                JObject obj = new JObject();
+                string message = (string)obj.SelectToken("error.message");
+                throw new Exception(message);
+            }
+            //try
+            //{       
+            instruments = JsonConvert.DeserializeObject<InstrumentsFutures>(response);
+            //}
+            //catch (Exception ex)
+            //{
+            //}     
+            return instruments;
+        }
+
         #endregion
 
         #region Searches and Queries  
@@ -571,20 +667,29 @@ namespace TWLib
             return chains;
         }
         #endregion
-        public void AddEquitySubscription(List<string> symbols)
+        public void AddEquitySubscription(List<string> symbols, int serviceDataFlags = 0)
         {
-            DxfeedClient.AddEquitySubscription(symbols);
+            if (symbols == null && symbols.Count == 0)
+                return;
+
+            Watchlist = Watchlist.Union(symbols).ToList();
 
             if (MetaqueueClient != null)
             {
                 foreach (string symbol in symbols)
                     MetaqueueClient.SubscribeMarketMetrics(symbol);
             }
+            if (DxfeedClient != null)
+                DxfeedClient.AddEquitySubscription(Watchlist, serviceDataFlags);
         }
 
-        public void AddOptionSubscription(List<string> symbols)
+        public void AddOptionSubscription(List<string> symbols, int serviceDataFlags = 0)
         {
-            DxfeedClient.AddOptionSubscription(symbols);
+            if (symbols == null && symbols.Count == 0)
+                return;
+            Watchlist = Watchlist.Union(symbols).ToList();
+            if (DxfeedClient != null)
+                DxfeedClient.AddOptionSubscription(Watchlist, serviceDataFlags);
         }
 
         public Orders ExecuteOrder(string accountID, object order)

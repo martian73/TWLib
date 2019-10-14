@@ -9,14 +9,20 @@ using System.Threading.Tasks;
 
 namespace TWLib.Streamer.Models
 {
-    public enum ServiceDataType
+    public enum ServiceDataType : int
     {
-        QUOTE,
-        GREEKS,
-        TRADE,
-        SUMMARY,
-        THEOPRICE,
-        PROFILE
+        [EnumMember(Value = "Quote")]
+        QUOTE = 1,
+        [EnumMember(Value = "Greeks")]
+        GREEKS = 2,
+        [EnumMember(Value = "Trade")]
+        TRADE = 4,
+        [EnumMember(Value = "Summary")]
+        SUMMARY = 8,
+        [EnumMember(Value = "TheoPrice")]
+        THEOPRICE = 16,
+        [EnumMember(Value = "Profile")]
+        PROFILE = 32
     }
 
     public enum TickDirection

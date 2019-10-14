@@ -21,9 +21,9 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Threading;
-using System.Threading.Tasks;
 using TWLib.Streamer.Models;
 
 namespace TWLib.Streamer
@@ -52,12 +52,30 @@ namespace TWLib.Streamer
         }
     }
 
+
+
     public class DxfeedStreamer : TWWebSocketManager, IDisposable
     {
         /// <summary>
         /// Conversation, request and response, grouped by id number
         /// </summary>
         public Dictionary<int, DxConvo> DxfeedConversations;
+
+        private List<string> _Watchlist;
+
+        public List<string> Watchlist
+        {
+            get
+            {
+                List<string> retval = JsonConvert.DeserializeObject<List<string>>(JsonConvert.SerializeObject(_Watchlist));
+                return retval;
+            }
+        }
+
+        public void SetWatchlist(List<string> list)
+        {
+            _Watchlist = list;
+        }
 
         /// <summary>
         /// Client Identification string
@@ -93,7 +111,7 @@ namespace TWLib.Streamer
         /// Interval time
         /// </summary>
         private int Interval = 0;
-
+        
         /// <summary>
         /// Timeout in milliseconds
         /// </summary>
@@ -101,6 +119,7 @@ namespace TWLib.Streamer
 
         public DxfeedStreamer()
         {
+            _Watchlist = new List<string>();
             StreamActive = false;
             DxfeedConversations = new Dictionary<int, DxConvo>();
         }
@@ -113,7 +132,7 @@ namespace TWLib.Streamer
             Console.WriteLine("DxFeed HeartBeatLoop starting.");
             while (StreamActive)
             {
-                
+
                 if (lastBeat.Add(heartBeatSpan) < DateTime.UtcNow)
                 {
                     DxfeedMetaConnectReq req = new DxfeedMetaConnectReq(ClientID, 1);
@@ -121,13 +140,14 @@ namespace TWLib.Streamer
                     lastBeat = DateTime.UtcNow;
                 }
                 Thread.Sleep(10);
-
             }
             Console.WriteLine("Exiting DxFeedStreamer HeartBeatLoop.");
+            HeartBeatThread = null;
         }
 
         public override void Init(string authToken)
         {
+            Console.WriteLine("Dxfeed Init.");
             if (StreamActive)
                 return;
 
@@ -143,7 +163,7 @@ namespace TWLib.Streamer
 
             Start();
 
-            while(_State != DxFeedStreamState.READY)
+            while (_State != DxFeedStreamState.READY)
             {
                 Thread.Sleep(100);
             }
@@ -158,11 +178,14 @@ namespace TWLib.Streamer
         {
             Console.WriteLine("DxFeed connected.");
             DxfeedMetaHandshakeReq req = new DxfeedMetaHandshakeReq(0, 60000, StreamTokens.Data.Token);
+            Console.WriteLine("Sending handshake.");
             SendRequest(req);
         }
 
         public override void Restart()
         {
+            Console.WriteLine("Restarting Dxfeed.");
+
             StreamActive = false;
             _State = DxFeedStreamState.NONE;
 
@@ -170,7 +193,7 @@ namespace TWLib.Streamer
             HeartBeatThread.Join();
             HeartBeatThread = null;
 
-            Init(AuthToken);
+            //Init(AuthToken);
         }
 
         public override void Stop()
@@ -178,28 +201,54 @@ namespace TWLib.Streamer
             StreamActive = false;
             _State = DxFeedStreamState.NONE;
 
-            HeartBeatThread.Join();
+            //HeartBeatThread.Join();
             HeartBeatThread = null;
 
             Console.WriteLine("Exiting Dxfeed.");
+            base.Stop();
         }
 
-        public void AddEquitySubscription(List<string> symbols)
+        public void ClearWatchlist()
         {
+            _Watchlist.Clear();
+        }
 
-            DxfeedServiceSubAddEquityReq req = new DxfeedServiceSubAddEquityReq(ClientID, symbols);
+        public void AddEquitySubscription(List<string> symbols, int serviceDataFlags = 0)
+        {
+            _Watchlist = _Watchlist.Union(symbols).ToList();
+
+            DxfeedServiceSubAddEquityReq req;
+
+            if (serviceDataFlags == 0)
+                req = new DxfeedServiceSubAddEquityReq(ClientID, _Watchlist);
+            else
+                req = new DxfeedServiceSubAddEquityReq(ClientID, _Watchlist, serviceDataFlags);
+
             SendRequest(req);
         }
 
-        public void AddFutureSubscription(List<string> symbols)
+        public void AddFutureSubscription(List<string> symbols, int serviceDataFlags = 0)
         {
-            DxfeedServiceSubAddEquityReq req = new DxfeedServiceSubAddEquityReq(ClientID, symbols);
+            _Watchlist = _Watchlist.Union(symbols).ToList();
+
+            DxfeedServiceSubAddEquityReq req;
+            if (serviceDataFlags == 0)
+                req = new DxfeedServiceSubAddEquityReq(ClientID, _Watchlist);
+            else
+                req = new DxfeedServiceSubAddEquityReq(ClientID, _Watchlist, serviceDataFlags);
             SendRequest(req);
         }
 
-        public void AddOptionSubscription(List<string> options)
+        public void AddOptionSubscription(List<string> options, int serviceDataFlags = 0)
         {
-            DxfeedServiceSubAddOptionReq req = new DxfeedServiceSubAddOptionReq(ClientID, options);
+            _Watchlist = _Watchlist.Union(options).ToList();
+
+            DxfeedServiceSubAddOptionReq req;
+            if (serviceDataFlags == 0)
+                req = new DxfeedServiceSubAddOptionReq(ClientID, _Watchlist);
+            else
+                req = new DxfeedServiceSubAddOptionReq(ClientID, _Watchlist, serviceDataFlags);
+
             SendRequest(req);
         }
 
@@ -236,18 +285,22 @@ namespace TWLib.Streamer
             foreach (object obj in resArr)
             {
                 string root = obj.ToString();
-                DxfeedResponse res = (DxfeedResponse)JsonConvert.DeserializeObject<DxfeedResponse>(root);
+                DxfeedResponse res = JsonConvert.DeserializeObject<DxfeedResponse>(root);
 
                 if (res.Error != null && res.Error.Length > 0)
                 {
+                    if (res.Error.StartsWith("402::"))
+                    {
+                        Stop();
+                        return;
+                    }
+
                     Console.WriteLine("Error: " + res.Error);
                     continue;
                 }
 
                 try
                 {
-                    Console.WriteLine(DateTime.UtcNow.ToString("u") + " Received: \r\n" + response);
-
                     switch (res.Channel)
                     {
                         case DxfeedChannel.METAHANDSHAKE:
@@ -265,7 +318,6 @@ namespace TWLib.Streamer
                             Interval = mcr.Advice.Interval;
                             Timeout = mcr.Advice.Timeout;
                             _State = DxFeedStreamState.READY;
-
                             if (HeartBeatThread == null)
                             {
                                 HeartBeatThread = new Thread(() => { HeartBeatLoop(); });
@@ -284,6 +336,7 @@ namespace TWLib.Streamer
                             Console.WriteLine("/service/sub");
                             break;
                         default:
+                            Console.WriteLine(DateTime.UtcNow.ToString("u") + " Received: \r\n" + response);
                             break;
                     }
                 }

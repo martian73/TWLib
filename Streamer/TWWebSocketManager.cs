@@ -68,7 +68,12 @@ namespace TWLib.Streamer
         protected abstract void HeartBeatLoop();
         public abstract void Init(string authToken);
         public abstract void Restart();
-        public abstract void Stop();
+
+        public virtual void Stop()
+        {
+            StreamActive = false;
+            RunLoopThread = null;
+        }
 
         protected void Start()
         {
@@ -89,6 +94,9 @@ namespace TWLib.Streamer
 
         private void RunLoop()
         {
+
+            Console.WriteLine("TWWebSocketManager: EnteringRunLoop");
+
             using (nf = new Notifier())
             using (StreamerSocket = new WebSocketSharp.WebSocket(StreamerWebsocketUrl))
             {
@@ -106,6 +114,8 @@ namespace TWLib.Streamer
                     Thread.Sleep(100);
                 }
 
+                Console.WriteLine("TWWebSocketManager: Leaving RunLoop");
+                RunLoopThread = null;
                 StreamerSocket.Close();
             }
         }
@@ -122,7 +132,7 @@ namespace TWLib.Streamer
             Console.WriteLine("Stream closed.");
             ServerDisconnected?.Invoke(sender, e);
             StreamActive = false;
-            RunLoopThread.Join();
+            //RunLoopThread.Join();
         }
 
         private void StreamerSocket_OnError(object sender, WebSocketSharp.ErrorEventArgs e)
@@ -171,7 +181,8 @@ namespace TWLib.Streamer
             string json = request.Serialize();
             StreamerSocket.Send(json);
 
-            Console.WriteLine("Sending " + request.StreamType.ToString() + ": " + json);
+            if (request.StreamType != StreamType.DXFEED)
+                Console.WriteLine("Sending " + request.StreamType.ToString() + ": " + json);
         }
 
         public virtual void SendRawRequest(string request)
