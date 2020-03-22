@@ -1,11 +1,8 @@
 ﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.Serialization;
-using System.Text;
-using System.Threading.Tasks;
+using TWLib.Models;
 
 namespace TWLib.Streamer.Models
 {
@@ -75,6 +72,31 @@ namespace TWLib.Streamer.Models
     public abstract class ServiceData
     {
         [JsonIgnoreAttribute]
+        public InstrumentType InstrumentType
+        {
+            get
+            {
+                if (EventSymbol == null || EventSymbol.Length < 1)
+                {
+                    return InstrumentType.UNKNOWN;
+                }
+                if (EventSymbol.StartsWith("."))
+                {
+                    return InstrumentType.EQUITYOPTION;
+                }
+                if (EventSymbol.StartsWith("/"))
+                {
+                    return InstrumentType.FUTURE;
+                }
+                if (EventSymbol.StartsWith("$"))
+                {
+                    return InstrumentType.INDEX;
+                }
+                return InstrumentType.EQUITY;
+            }
+        }
+
+        [JsonIgnoreAttribute]
         public abstract ServiceDataType DataType { get; }
 
         [JsonProperty("eventSymbol")]
@@ -111,7 +133,7 @@ namespace TWLib.Streamer.Models
         public int TimeNanoPart { get; set; }
 
         [JsonProperty("bidTime")]
-        public long BidTime { get; set; }
+        public double BidTime { get; set; }
 
         [JsonProperty("bidExchangeCode")]
         public string BidExchangeCode { get; set; }
@@ -123,7 +145,7 @@ namespace TWLib.Streamer.Models
         public double BidSize { get; set; }
 
         [JsonProperty("askTime")]
-        public long AskTime { get; set; }
+        public double AskTime { get; set; }
 
         [JsonProperty("askExchangeCode")]
         public string AskExchangeCode { get; set; }
@@ -144,7 +166,7 @@ namespace TWLib.Streamer.Models
         public override ServiceDataType DataType { get { return ServiceDataType.TRADE; } }
 
         [JsonProperty("time")]
-        public long Time { get; set; }
+        public double Time { get; set; }
 
         [JsonProperty("timeNanoPart")]
         public int TimeNanoPart { get; set; }
@@ -190,7 +212,7 @@ namespace TWLib.Streamer.Models
         public long Index { get; set; }
 
         [JsonProperty("time")]
-        public long Time { get; set; }
+        public double Time { get; set; }
 
         [JsonProperty("sequence")]
         public int Sequence { get; set; }
@@ -276,7 +298,7 @@ namespace TWLib.Streamer.Models
         public long Index { get; set; }
 
         [JsonProperty("time")]
-        public long Time { get; set; }
+        public double Time { get; set; }
 
         [JsonProperty("sequence")]
         public int Sequence { get; set; }

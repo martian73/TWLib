@@ -23,74 +23,61 @@
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using System.Collections.Generic;
-using System.Diagnostics;
 
 namespace TWLib.Streamer.Models
 {
-    public class DxfeedServiceSubAddOptionReq : DxfeedRequest
+
+    public class DxfeedServiceSubRemoveEquityReq : DxfeedRequest
     {
 
-        public DxfeedServiceSubAddOptionReq()
+        public DxfeedServiceSubRemoveEquityReq()
         {
 
         }
 
-        public DxfeedServiceSubAddOptionReq(string clientId, List<string> symbols, int profiles =
-            (int)ServiceDataType.THEOPRICE |
+        public DxfeedServiceSubRemoveEquityReq(string clientId, List<string> symbols, int profiles =
+            (int)ServiceDataType.PROFILE |
             (int)ServiceDataType.QUOTE |
             (int)ServiceDataType.SUMMARY |
-            (int)ServiceDataType.TRADE |
-            (int)ServiceDataType.GREEKS)
+            (int)ServiceDataType.TRADE)
         {
-
-            if ((profiles & (int)ServiceDataType.GREEKS) == 0)
-                Debugger.Break();
 
             ClientId = clientId;
             Data = new Data2();
-            Data.Add = new Add2();
+            Data.Remove = new Remove2();
 
-            if ((profiles & (int)ServiceDataType.GREEKS) > 0)
-                Data.Add.Greeks = symbols;
+            if ((profiles & (int)ServiceDataType.PROFILE) > 0)
+                Data.Remove.Profile = symbols;
 
             if ((profiles & (int)ServiceDataType.QUOTE) > 0)
-                Data.Add.Quote = symbols;
+                Data.Remove.Quote = symbols;
 
             if ((profiles & (int)ServiceDataType.SUMMARY) > 0)
-                Data.Add.Summary = symbols;
+                Data.Remove.Summary = symbols;
 
             if ((profiles & (int)ServiceDataType.TRADE) > 0)
-                Data.Add.Trade = symbols;
-
-            if ((profiles & (int)ServiceDataType.THEOPRICE) > 0)
-                Data.Add.TheoPrice = symbols;
+                Data.Remove.Trade = symbols;
         }
 
-        // [{"id":4,"clientId":"auroer7g4j8i0wo0k3vl6fahzxei","channel":"/service/sub","data":{"add":{"Quote":[".SPY191004P291",".SPY191004P292"],"Greeks":[".SPY191004P291",".SPY191004P292"],"Trade":[".SPY191004P291",".SPY191004P292"],"Summary":[".SPY191004P291",".SPY191004P292"],"TheoPrice":[".SPY191004P291",".SPY191004P292"]}}}]
-
-        public class Add2
+        public class Remove2
         {
-            [JsonProperty("Quote")]
-            public IList<string> Quote { get; set; }
-
-            [JsonProperty("Greeks")]
-            public IList<string> Greeks { get; set; }
-
             [JsonProperty("Trade")]
             public IList<string> Trade { get; set; }
+
+            [JsonProperty("Quote")]
+            public IList<string> Quote { get; set; }
 
             [JsonProperty("Summary")]
             public IList<string> Summary { get; set; }
 
-            [JsonProperty("TheoPrice")]
-            public IList<string> TheoPrice { get; set; }
-
+            [JsonProperty("Profile")]
+            public IList<string> Profile { get; set; }
         }
 
         public class Data2
         {
-            [JsonProperty("add")]
-            public Add2 Add { get; set; }
+            [JsonProperty("remove")]
+            public Remove2 Remove { get; set; }
         }
 
         [JsonProperty("clientId")]
@@ -105,13 +92,13 @@ namespace TWLib.Streamer.Models
 
         public override string Serialize()
         {
-            DxfeedServiceSubAddOptionReq[] arr = new DxfeedServiceSubAddOptionReq[] { this };
+            DxfeedServiceSubRemoveEquityReq[] arr = new DxfeedServiceSubRemoveEquityReq[] { this };
             return JsonConvert.SerializeObject(arr);
         }
 
         public override TWRequest Deserialize(string json)
         {
-            return JsonConvert.DeserializeObject<DxfeedServiceSubAddOptionReq>(json);
+            return JsonConvert.DeserializeObject<DxfeedServiceSubRemoveEquityReq>(json);
         }
     }
 }

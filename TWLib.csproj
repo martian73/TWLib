@@ -76,6 +76,7 @@
     <Compile Include="Streamer\Models\DxfeedServiceSubAddOptionReq.cs" />
     <Compile Include="Streamer\Models\DxfeedServiceDataRes.cs" />
     <Compile Include="Streamer\Models\DxfeedServiceSubAddEquityReq.cs" />
+    <Compile Include="Streamer\Models\DxfeedServiceSubRemoveEquityReq.cs" />
     <Compile Include="Streamer\Models\Enumerations.cs" />
     <Compile Include="Streamer\Models\ServiceData.cs" />
     <Compile Include="Streamer\Models\StreamerRequest.cs" />

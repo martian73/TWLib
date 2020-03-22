@@ -71,14 +71,31 @@ namespace TWLib
 
         public void AddWatchlistSymbols(List<string> list)
         {
-            Watchlist = Watchlist.Union(list).ToList();
-            AddEquitySubscription(Watchlist, (int)ServiceDataType.QUOTE | (int)ServiceDataType.TRADE);
+            if (list == null || list.Count == 0)
+                return;
+
+            bool dirty = false;
+            foreach (string str in list)
+            {
+                if (!Watchlist.Contains(str))
+                {
+                    dirty = true;
+                }
+                break;
+            }
+            if (dirty)
+            {
+                Watchlist = Watchlist.Union(list).ToList();
+                AddOptionSubscription(Watchlist, (int)ServiceDataType.QUOTE | (int)ServiceDataType.TRADE | (int)ServiceDataType.SUMMARY | (int)ServiceDataType.GREEKS);
+            }
         }
 
         public void SetWatchlistSymbols(List<String> list)
         {
+            SetOptionSubscription(new List<String>(), (int)ServiceDataType.QUOTE | (int)ServiceDataType.TRADE | (int)ServiceDataType.SUMMARY | (int)ServiceDataType.GREEKS);
             Watchlist = list;
-            AddEquitySubscription(list, (int)ServiceDataType.QUOTE | (int)ServiceDataType.TRADE);
+            DxfeedClient.SetWatchlist(list);
+            SetOptionSubscription(list, (int)ServiceDataType.QUOTE | (int)ServiceDataType.TRADE | (int)ServiceDataType.SUMMARY | (int)ServiceDataType.GREEKS);
         }
 
         public TWClient()
@@ -131,6 +148,7 @@ namespace TWLib
         public void Logout()
         {
             LoggedIn = false;
+            _Running = false;
             _AuthToken = null;
             Cookies = new CookieContainer();
 
@@ -240,29 +258,50 @@ namespace TWLib
             QuoteCallback?.Invoke(Sender, data);
         }
 
+        public Streamer.Models.DxFeedStreamState DxfeedState
+        {
+            get
+            {
+                if (DxfeedClient == null)
+                    return DxFeedStreamState.NONE;
+                else
+                    return DxfeedClient.State;
+            }
+        }
+        
         public void DxFeedLoop()
         {
+            int retries = 0;
+
             Console.WriteLine("TWClient: Starting Dxfeed.");
-            while (_Running)
+            while (_Running && retries++ < 10)
             {
-                DxfeedClient = new DxfeedStreamer();
-                DxfeedClient.Init(_AuthToken);
-                
-                DxfeedClient.QuoteCallback += DxfeedQuoteCallback;
-
-                Console.WriteLine("TWClient: Dxfeed ready.");
-
-                if (Watchlist != null && Watchlist.Count > 0)
-                    DxfeedClient.AddEquitySubscription(Watchlist, (int)ServiceDataType.QUOTE | (int)ServiceDataType.TRADE);
-
-                do
+                try
                 {
-                    Thread.Sleep(100);
-                } while (DxfeedClient.State == Streamer.Models.DxFeedStreamState.READY);
+                    DxfeedClient = new DxfeedStreamer();
+                    DxfeedClient.Init(_AuthToken);
 
-                Console.WriteLine("TWClient: Restarting Dxfeed.");
-                CloseDxfeedStreamer();
+                    DxfeedClient.QuoteCallback += DxfeedQuoteCallback;
+
+                    Console.WriteLine("TWClient: Dxfeed ready.");
+
+                    if (Watchlist != null && Watchlist.Count > 0)
+                        DxfeedClient.AddOptionSubscription(Watchlist, (int)ServiceDataType.QUOTE | (int)ServiceDataType.TRADE | (int)ServiceDataType.GREEKS | (int)ServiceDataType.SUMMARY);
+                    do
+                    {
+                        Thread.Sleep(100);
+                    } while (DxfeedClient.State == Streamer.Models.DxFeedStreamState.READY);
+
+                    Console.WriteLine("TWClient: Restarting Dxfeed.");
+                    CloseDxfeedStreamer();
+                }
+                catch (Exception ex)
+                {
+                    if (_Running && retries < 10) // only delay if we haven't started the closing process
+                        Thread.Sleep(5000);
+                }
             }
+            Console.WriteLine("Exiting DxFeedLoop");
         }
 
         public void InitDxfeedStreamer()
@@ -270,11 +309,18 @@ namespace TWLib
             if (!LoggedIn || _AuthToken == null)
                 throw new Exception("TWClient: Not logged in.");
 
+            if (DxfeedClient != null)
+                throw new Exception("DxfeedClient already running.");
+
+
             if (DxfeedThread == null)
             {
                 DxfeedThread = new Thread(() => { DxFeedLoop(); });
                 DxfeedThread.Start();
             }
+
+            while (DxfeedClient == null || DxfeedClient.State != DxFeedStreamState.READY)
+                Thread.Sleep(100);
         }
 
         public void CloseDxfeedStreamer()
@@ -683,10 +729,56 @@ namespace TWLib
                 DxfeedClient.AddEquitySubscription(Watchlist, serviceDataFlags);
         }
 
+        public void RemoveEquitySubscription(List<string> symbols)
+        {
+            if (symbols == null || symbols.Count == 0)
+                return;
+
+            Watchlist = Watchlist.Except(symbols).ToList();
+
+            if (Watchlist != null && Watchlist.Count > 0)
+            {
+                DxfeedClient.RemoveEquitySubscription(symbols);
+            }
+        }
+
+        public void SetEquitySubscription(List<string> symbols, int serviceDataFlags = 0)
+        {
+            if (symbols == null)
+                return;
+
+            Watchlist = symbols;
+
+            if (MetaqueueClient != null)
+            {
+                foreach (string symbol in symbols)
+                    MetaqueueClient.SubscribeMarketMetrics(symbol);
+            }
+            if (DxfeedClient != null)
+                DxfeedClient.AddEquitySubscription(Watchlist, serviceDataFlags);
+        }
+
+        public void SetOptionSubscription(List<string> symbols, int serviceDataFlags = 0)
+        {
+            if (symbols == null)
+                return;
+
+            Watchlist = symbols;
+
+            if (MetaqueueClient != null)
+            {
+                foreach (string symbol in symbols)
+                    MetaqueueClient.SubscribeMarketMetrics(symbol);
+            }
+            if (DxfeedClient != null)
+                DxfeedClient.AddOptionSubscription(Watchlist, serviceDataFlags);
+        }
+
         public void AddOptionSubscription(List<string> symbols, int serviceDataFlags = 0)
         {
             if (symbols == null && symbols.Count == 0)
                 return;
+
             Watchlist = Watchlist.Union(symbols).ToList();
             if (DxfeedClient != null)
                 DxfeedClient.AddOptionSubscription(Watchlist, serviceDataFlags);

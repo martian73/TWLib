@@ -190,7 +190,8 @@ namespace TWLib.Streamer
             _State = DxFeedStreamState.NONE;
 
             // Wait for heartbeat thread to exit
-            HeartBeatThread.Join();
+            if (HeartBeatThread != null)
+                HeartBeatThread.Join();
             HeartBeatThread = null;
 
             //Init(AuthToken);
@@ -200,7 +201,6 @@ namespace TWLib.Streamer
         {
             StreamActive = false;
             _State = DxFeedStreamState.NONE;
-
             //HeartBeatThread.Join();
             HeartBeatThread = null;
 
@@ -223,6 +223,17 @@ namespace TWLib.Streamer
                 req = new DxfeedServiceSubAddEquityReq(ClientID, _Watchlist);
             else
                 req = new DxfeedServiceSubAddEquityReq(ClientID, _Watchlist, serviceDataFlags);
+
+            SendRequest(req);
+        }
+
+        public void RemoveEquitySubscription(List<string> symbols)
+        {
+            _Watchlist = _Watchlist.Except(symbols).ToList();
+
+            DxfeedServiceSubRemoveEquityReq req;
+
+            req = new DxfeedServiceSubRemoveEquityReq(ClientID, symbols);
 
             SendRequest(req);
         }
@@ -255,10 +266,14 @@ namespace TWLib.Streamer
 
         public override void SendRequest(TWRequest request)
         {
+
+
             if (request is DxfeedRequest)
             {
                 if (request.StreamType != StreamType.DXFEED)
                     throw new Exception("Invalid request type");
+
+                //Console.WriteLine("DXF Request: " + JsonConvert.SerializeObject(request));
 
                 // Add it to the list of conversations
                 int id = GetNextRequestID();
@@ -279,6 +294,8 @@ namespace TWLib.Streamer
             if (!StreamActive)
                 return;
 
+
+
             // start with serializing the base object, DxfeedResponse, and switch on channel
             List<object> resArr = JsonConvert.DeserializeObject<List<object>>(response);
 
@@ -298,7 +315,6 @@ namespace TWLib.Streamer
                     Console.WriteLine("Error: " + res.Error);
                     continue;
                 }
-
                 try
                 {
                     switch (res.Channel)
@@ -327,13 +343,13 @@ namespace TWLib.Streamer
                         case DxfeedChannel.SERVICEDATA:
                             DxfeedServiceDataRes dxSerDataRes = JsonConvert.DeserializeObject<DxfeedServiceDataRes>(root);
                             QuoteCallback?.Invoke(this, dxSerDataRes.ServiceData);
-                            Console.WriteLine("/service/data");
+                            //Console.WriteLine("/service/data");
                             break;
                         case DxfeedChannel.SERVICESTATE:
-                            Console.WriteLine("/service/state");
+                            //Console.WriteLine("/service/state");
                             break;
                         case DxfeedChannel.SERVICESUB:
-                            Console.WriteLine("/service/sub");
+                            //Console.WriteLine("/service/sub");
                             break;
                         default:
                             Console.WriteLine(DateTime.UtcNow.ToString("u") + " Received: \r\n" + response);
@@ -343,7 +359,7 @@ namespace TWLib.Streamer
                 catch (Exception ex)
                 {
                     Console.WriteLine("Error Rx: " + ex.Message);
-                    Console.WriteLine("Request: " + response);
+                    Console.WriteLine("DXF Response: " + response);
                     Restart();
                 }
             }

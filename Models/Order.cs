@@ -85,7 +85,11 @@ namespace TWLib.Models
         [EnumMember(Value = "Equity Option")]
         EQUITYOPTION,
         [EnumMember(Value = "Future")]
-        FUTURE
+        FUTURE,
+        [EnumMember(Value = "Index")]
+        INDEX,
+        [EnumMember(Value = "Unknown")]
+        UNKNOWN
     }
 
     [JsonConverter(typeof(StringEnumConverter))]
