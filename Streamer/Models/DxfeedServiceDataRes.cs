@@ -87,6 +87,10 @@ namespace TWLib.Streamer.Models
                     {
                         Greeks.Headers = headers;
                     }
+                    //if (type.CompareTo("order") == 0)
+                    //{
+                    //    Order.Headers = headers;
+                    //}
                 }
                 
                 dynamic var = new ExpandoObject();

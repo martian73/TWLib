@@ -169,6 +169,7 @@ namespace TWLib.Models
                 set;
             }
         }
+
         public class Data2
         {
             [JsonProperty("buying-power-effect")]
@@ -177,6 +178,7 @@ namespace TWLib.Models
                 get;
                 set;
             }
+
             [JsonProperty("fee-calculation")]
             public FeeCalculation FeeCalculation
             {

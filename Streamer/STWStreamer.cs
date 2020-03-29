@@ -87,11 +87,6 @@ namespace TWLib.Streamer
             //StwResponse sRes = JsonConvert.DeserializeObject<StwResponse>(response);
         }
 
-        public override void Restart()
-        {
-            throw new NotImplementedException();
-        }
-
         public void SendRequest(StwRequest request)
         {
             request.Id = GetNextRequestID().ToString();

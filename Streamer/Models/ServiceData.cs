@@ -19,7 +19,9 @@ namespace TWLib.Streamer.Models
         [EnumMember(Value = "TheoPrice")]
         THEOPRICE = 16,
         [EnumMember(Value = "Profile")]
-        PROFILE = 32
+        PROFILE = 32,
+        [EnumMember(Value = "order")]
+        ORDER = 64
     }
 
     public enum TickDirection
@@ -354,5 +356,4 @@ namespace TWLib.Streamer.Models
         [JsonProperty("lowLimitPrice")]
         public double LowLimitPrice { get; set; }
     }
-
 }

@@ -79,6 +79,7 @@
     <Compile Include="Streamer\Models\DxfeedServiceSubRemoveEquityReq.cs" />
     <Compile Include="Streamer\Models\Enumerations.cs" />
     <Compile Include="Streamer\Models\ServiceData.cs" />
+    <Compile Include="Streamer\Models\ServiceDataOrder.cs" />
     <Compile Include="Streamer\Models\StreamerRequest.cs" />
     <Compile Include="Models\TradingStatus.cs" />
     <Compile Include="Models\ValidateResponse.cs" />

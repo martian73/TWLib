@@ -67,7 +67,6 @@ namespace TWLib.Streamer
 
         protected abstract void HeartBeatLoop();
         public abstract void Init(string authToken);
-        public abstract void Restart();
 
         public virtual void Stop()
         {
@@ -75,7 +74,7 @@ namespace TWLib.Streamer
             RunLoopThread = null;
         }
 
-        protected void Start()
+        public void Start()
         {
             if (RunLoopThread != null)
                 return;

@@ -81,11 +81,6 @@ namespace TWLib.Streamer
             Console.WriteLine("Response MetaqueStreamer:\r\n" + response);
         }
 
-        public override void Restart()
-        {
-            throw new NotImplementedException();
-        }
-
         public override void Stop()
         {
             StreamActive = false;

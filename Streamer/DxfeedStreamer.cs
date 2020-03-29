@@ -52,8 +52,6 @@ namespace TWLib.Streamer
         }
     }
 
-
-
     public class DxfeedStreamer : TWWebSocketManager, IDisposable
     {
         /// <summary>
@@ -149,7 +147,10 @@ namespace TWLib.Streamer
         {
             Console.WriteLine("Dxfeed Init.");
             if (StreamActive)
+            {
+                Console.WriteLine("Stream already active.");
                 return;
+            }
 
             AuthToken = authToken;
 
@@ -160,13 +161,6 @@ namespace TWLib.Streamer
             StreamerApiUrl = StreamTokens.Data.StreamerUrl;
             ServerConnected += DxfeedStreamer_ServerConnected;
             ServerDisconnected += DxfeedStreamer_ServerDisconnected;
-
-            Start();
-
-            while (_State != DxFeedStreamState.READY)
-            {
-                Thread.Sleep(100);
-            }
         }
 
         private void DxfeedStreamer_ServerDisconnected(object sender, EventArgs e)
@@ -182,28 +176,15 @@ namespace TWLib.Streamer
             SendRequest(req);
         }
 
-        public override void Restart()
-        {
-            Console.WriteLine("Restarting Dxfeed.");
-
-            StreamActive = false;
-            _State = DxFeedStreamState.NONE;
-
-            // Wait for heartbeat thread to exit
-            if (HeartBeatThread != null)
-                HeartBeatThread.Join();
-            HeartBeatThread = null;
-
-            //Init(AuthToken);
-        }
-
         public override void Stop()
         {
+            QuoteCallback = null;
+            ServerConnected -= DxfeedStreamer_ServerConnected;
+            ServerDisconnected -= DxfeedStreamer_ServerDisconnected;
             StreamActive = false;
             _State = DxFeedStreamState.NONE;
-            //HeartBeatThread.Join();
+            HeartBeatThread?.Join();
             HeartBeatThread = null;
-
             Console.WriteLine("Exiting Dxfeed.");
             base.Stop();
         }
@@ -262,12 +243,9 @@ namespace TWLib.Streamer
 
             SendRequest(req);
         }
-
-
+        
         public override void SendRequest(TWRequest request)
         {
-
-
             if (request is DxfeedRequest)
             {
                 if (request.StreamType != StreamType.DXFEED)
@@ -278,7 +256,7 @@ namespace TWLib.Streamer
                 // Add it to the list of conversations
                 int id = GetNextRequestID();
                 ((DxfeedRequest)request).Id = id.ToString();
-                //Console.WriteLine("DxFeed request: " + JsonConvert.SerializeObject(request));
+                Console.WriteLine("DxFeed request: " + JsonConvert.SerializeObject(request));
 
                 // Call base to send it through the web socket
                 base.SendRequest(request);
@@ -293,9 +271,7 @@ namespace TWLib.Streamer
         {
             if (!StreamActive)
                 return;
-
-
-
+            
             // start with serializing the base object, DxfeedResponse, and switch on channel
             List<object> resArr = JsonConvert.DeserializeObject<List<object>>(response);
 
@@ -346,10 +322,12 @@ namespace TWLib.Streamer
                             //Console.WriteLine("/service/data");
                             break;
                         case DxfeedChannel.SERVICESTATE:
-                            //Console.WriteLine("/service/state");
+                            Console.WriteLine("/service/state");
+                            Console.WriteLine(root);
                             break;
                         case DxfeedChannel.SERVICESUB:
-                            //Console.WriteLine("/service/sub");
+                            Console.WriteLine("/service/sub");
+                            Console.WriteLine(root);
                             break;
                         default:
                             Console.WriteLine(DateTime.UtcNow.ToString("u") + " Received: \r\n" + response);
@@ -360,7 +338,6 @@ namespace TWLib.Streamer
                 {
                     Console.WriteLine("Error Rx: " + ex.Message);
                     Console.WriteLine("DXF Response: " + response);
-                    Restart();
                 }
             }
 
