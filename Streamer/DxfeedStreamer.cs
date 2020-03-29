@@ -160,12 +160,11 @@ namespace TWLib.Streamer
             StreamerWebsocketUrl = (StreamTokens.Data.WebsocketUrl + "/cometd").Replace("https://", "wss://");
             StreamerApiUrl = StreamTokens.Data.StreamerUrl;
             ServerConnected += DxfeedStreamer_ServerConnected;
-            ServerDisconnected += DxfeedStreamer_ServerDisconnected;
+            //ServerDisconnected += DxfeedStreamer_ServerDisconnected;
         }
 
         private void DxfeedStreamer_ServerDisconnected(object sender, EventArgs e)
         {
-            Console.WriteLine("DxFeed disconnected.");
         }
 
         private void DxfeedStreamer_ServerConnected(object sender, EventArgs e)
@@ -180,18 +179,12 @@ namespace TWLib.Streamer
         {
             QuoteCallback = null;
             ServerConnected -= DxfeedStreamer_ServerConnected;
-            ServerDisconnected -= DxfeedStreamer_ServerDisconnected;
             StreamActive = false;
             _State = DxFeedStreamState.NONE;
             HeartBeatThread?.Join();
             HeartBeatThread = null;
             Console.WriteLine("Exiting Dxfeed.");
             base.Stop();
-        }
-
-        public void ClearWatchlist()
-        {
-            _Watchlist.Clear();
         }
 
         public void AddEquitySubscription(List<string> symbols, int serviceDataFlags = 0)
@@ -237,9 +230,9 @@ namespace TWLib.Streamer
 
             DxfeedServiceSubAddOptionReq req;
             if (serviceDataFlags == 0)
-                req = new DxfeedServiceSubAddOptionReq(ClientID, _Watchlist);
+                req = new DxfeedServiceSubAddOptionReq(ClientID, options);
             else
-                req = new DxfeedServiceSubAddOptionReq(ClientID, _Watchlist, serviceDataFlags);
+                req = new DxfeedServiceSubAddOptionReq(ClientID, options, serviceDataFlags);
 
             SendRequest(req);
         }
@@ -340,7 +333,6 @@ namespace TWLib.Streamer
                     Console.WriteLine("DXF Response: " + response);
                 }
             }
-
         }
 
         private StreamerTokens GetQuoteStreamerTokens()
@@ -365,14 +357,7 @@ namespace TWLib.Streamer
             }
 
             JsonSerializer serializer = new JsonSerializer();
-            //try
-            //{
             tokens = JsonConvert.DeserializeObject<StreamerTokens>(response);
-            //}
-            //catch (Exception ex)
-            //{
-            //  
-            //}
             return tokens;
         }
     }

@@ -43,8 +43,6 @@ namespace TWLib
         public static string APIurl = "https://api.tastyworks.com";
         private string _AuthToken;
         private Accounts _Accounts;
-        private bool _Running = true;
-
 
         public Accounts Accounts
         {
@@ -66,6 +64,14 @@ namespace TWLib
         private readonly string UserAgent = "okhttp/3.11.0";
         private Thread KeepAliveThread = null;
 
+        public bool DxfeedStreamRunning
+        {
+            get
+            {
+                return DxfeedClient?.State == DxFeedStreamState.READY;
+            }
+        }
+
         private List<string> Watchlist
         {
             get
@@ -78,7 +84,18 @@ namespace TWLib
         {
             if (list == null || list.Count == 0)
                 return;
-            DxfeedClient?.AddOptionSubscription(Watchlist, (int)ServiceDataType.QUOTE | (int)ServiceDataType.TRADE | (int)ServiceDataType.SUMMARY | (int)ServiceDataType.GREEKS);
+
+            bool dirty = false;
+            foreach (string sym in list)
+            {
+                if (!Watchlist.Contains(sym))
+                    dirty = true;
+            }
+
+            if (dirty)
+            {
+                DxfeedClient?.AddOptionSubscription(list, (int)ServiceDataType.QUOTE | (int)ServiceDataType.TRADE | (int)ServiceDataType.SUMMARY | (int)ServiceDataType.GREEKS);
+            }
         }
 
         public void SetWatchlistSymbols(List<String> list)
@@ -138,7 +155,6 @@ namespace TWLib
         public void Logout()
         {
             LoggedIn = false;
-            _Running = false;
             _AuthToken = null;
             Cookies = new CookieContainer();
 
@@ -266,18 +282,24 @@ namespace TWLib
 
             if (DxfeedClient != null)
             {
-                throw new Exception("DxfeedClient already running.  Use CloseDxfeedStreamer first.");
+                throw new Exception("TWClient: DxfeedClient already running.  Use CloseDxfeedStreamer first.");
             }
 
             DxfeedClient = new DxfeedStreamer();
-            DxfeedClient.Init(_AuthToken);
             DxfeedClient.QuoteCallback += DxfeedQuoteCallback;
+            DxfeedClient.ServerDisconnected += DxfeedDisconnected;
+            DxfeedClient.Init(_AuthToken);
             DxfeedClient.Start();
 
             while (DxfeedClient.State != DxFeedStreamState.READY)
                 Thread.Sleep(100);
+            
+            Console.WriteLine("TWClient: DxfeedClient ready.");
+        }
 
-            Console.WriteLine("DxfeedClient ready.");
+        public virtual void DxfeedDisconnected(object sender, EventArgs args)
+        {
+            Console.WriteLine("TWClient: DxfeedDisconnected");
         }
 
         public void CloseDxfeedStreamer()
@@ -859,7 +881,8 @@ namespace TWLib
             }
             request.UserAgent = UserAgent;
             // grab te response and print it out to the console along with the status code      
-            string result;
+            string result = null;
+
             try
             {
                 response = (HttpWebResponse)request.GetResponse();
@@ -867,12 +890,19 @@ namespace TWLib
             catch (WebException ex)
             {
                 response = (HttpWebResponse)ex.Response;
-                using (StreamReader rdr = new StreamReader(response.GetResponseStream()))
+                try
                 {
-                    result = rdr.ReadToEnd();
-                    return result;
+                    using (StreamReader rdr = new StreamReader(response.GetResponseStream()))
+                    {
+                        result = rdr.ReadToEnd();
+                    }
                 }
+                catch (Exception)
+                {
+                }
+                return result;
             }
+
             if (response != null && response.Cookies != null)
             {
                 Cookies.Add(response.Cookies);
